@@ -84,7 +84,7 @@ function renderPrimaryTable() {
     let html = '';
     games.forEach(game => {
         const todayDisplay = (game.today && game.today !== '' && game.today !== '-')
-            ? `<strong style="font-size:20px;color:#00ff88;">${game.today}</strong>`
+            ? `<strong style="font-size:20px;">${game.today}</strong>`
             : `<span class="waiting-dots"></span>`;
 
         html += `<tr>
@@ -107,7 +107,7 @@ function renderSecondaryTable() {
     let html = '';
     games.forEach(game => {
         const todayDisplay = (game.today && game.today !== '' && game.today !== '-')
-            ? `<strong style="font-size:20px;color:#00ff88;">${game.today}</strong>`
+            ? `<strong style="font-size:20px;">${game.today}</strong>`
             : `<span class="waiting-dots"></span>`;
 
         html += `<tr>
