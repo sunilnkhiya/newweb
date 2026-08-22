@@ -3,21 +3,57 @@
 // Database-First, ID-Driven State Management
 // ============================================================
 
-// Auth check
-function checkAuth() {
-    if (sessionStorage.getItem('a7_logged_in') !== 'true') {
-        console.warn('[ADMIN AUTH] Unauthorized access attempt. Redirecting to login.');
+// Auth check using Firebase Authentication session with ID token claim verification
+function checkAuth(callback) {
+    if (typeof firebase === 'undefined' || !firebase.auth) {
+        console.warn('[ADMIN AUTH] Firebase Auth SDK unavailable. Access denied.');
         window.location.href = 'login.html';
         return false;
     }
-    return true;
+    firebase.auth().onAuthStateChanged(function(user) {
+        if (user) {
+            console.log('[ADMIN AUTH] Authenticated user email:', user.email);
+            console.log('[ADMIN AUTH] Authenticated user UID:', user.uid);
+            user.getIdTokenResult(true)
+                .then(function(tokenResult) {
+                    console.log('[FIREBASE AUTH DEBUG] Force-refreshed ID token result.');
+                    console.log('[FIREBASE AUTH DEBUG] currentUser.email =', user.email);
+                    console.log('[FIREBASE AUTH DEBUG] tokenResult.claims.admin =', tokenResult.claims.admin);
+                    console.log('[FIREBASE AUTH DEBUG] Project ID = web3-7a4cf');
+                    if (tokenResult.claims && tokenResult.claims.admin === true) {
+                        console.log('[FIREBASE AUTH DEBUG] SUCCESS: Admin custom claim { admin: true } verified!');
+                    } else {
+                        console.warn('[FIREBASE AUTH DEBUG] WARNING: Custom claim { admin: true } missing for ' + user.email + '! Database write rules will reject writes until claim is set.');
+                    }
+                    if (typeof callback === 'function') callback(user, tokenResult);
+                })
+                .catch(function(err) {
+                    console.error('[FIREBASE AUTH DEBUG] Error fetching token result:', err);
+                    if (typeof callback === 'function') callback(user, null);
+                });
+        } else {
+            console.warn('[ADMIN AUTH] User is not authenticated. Redirecting to login.');
+            window.location.href = 'login.html';
+        }
+    });
 }
 
 function logout() {
-    console.log('[ADMIN AUTH] Logging out admin session.');
-    sessionStorage.removeItem('a7_logged_in');
-    sessionStorage.removeItem('a7_settings_unlocked');
-    window.location.href = 'login.html';
+    console.log('[ADMIN AUTH] Logging out via Firebase signOut().');
+    sessionStorage.clear();
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+        firebase.auth().signOut()
+            .then(function() {
+                console.log('[ADMIN AUTH] Firebase signOut successful.');
+                window.location.href = 'login.html';
+            })
+            .catch(function(err) {
+                console.error('[ADMIN AUTH] SignOut error:', err);
+                window.location.href = 'login.html';
+            });
+    } else {
+        window.location.href = 'login.html';
+    }
 }
 
 // Toast notification
@@ -59,31 +95,16 @@ function setElementLoading(el, isLoading, loadingText) {
 }
 
 // ============================================================
-// Settings Passkey Security Gate
+// Settings Security Gate (Protected by Firebase Auth)
 // ============================================================
 
-function getSettingsPasskey() {
-    if (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.SETTINGS_PASSKEY) {
-        return window.ENV_CONFIG.SETTINGS_PASSKEY;
-    }
-    return "SecurityxAdmin2026";
-}
-
 function verifySettingsPasskey() {
-    var inputEl = document.getElementById('settings-passkey-input');
-    if (!inputEl) return;
-    var entered = inputEl.value.trim();
-    var correct = getSettingsPasskey();
-
-    if (entered === correct) {
+    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
         sessionStorage.setItem('a7_settings_unlocked', 'true');
-        showToast('Settings Unlocked Successfully!', 'success');
+        showToast('Settings Unlocked!', 'success');
         updateSettingsGateState();
     } else {
-        showToast('Invalid Security Passkey!', 'error');
-        inputEl.style.borderColor = '#dc2626';
-        inputEl.classList.add('flash-red');
-        setTimeout(function() { inputEl.classList.remove('flash-red'); }, 500);
+        showToast('Authentication required!', 'error');
     }
 }
 
@@ -92,7 +113,8 @@ function updateSettingsGateState() {
     var unlockedContent = document.getElementById('settings-unlocked-content');
     if (!lockScreen || !unlockedContent) return;
 
-    if (sessionStorage.getItem('a7_settings_unlocked') === 'true') {
+    var isAuthenticated = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser);
+    if (isAuthenticated) {
         lockScreen.style.display = 'none';
         unlockedContent.style.display = 'block';
     } else {
@@ -1000,39 +1022,72 @@ function saveDisclaimer(btnEl) {
 
 // --- Credentials Editor ---
 
+// --- Credentials Status Box ---
+
 function renderAdminCredentials() {
     var container = document.getElementById('admin-credentials');
     if (!container) return;
-    var creds = getData('credentials');
+    var user = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
 
-    var html = '<div style="max-width:400px;">';
-    html += '<label style="color:#ffd800;font-weight:700;margin-bottom:5px;display:block;">Username</label>';
-    html += '<input class="admin-input" id="cred-username" value="' + (creds ? creds.username : '') + '" style="margin-bottom:15px;">';
-    html += '<label style="color:#ffd800;font-weight:700;margin-bottom:5px;display:block;">New Password</label>';
-    html += '<input class="admin-input" id="cred-password" type="password" value="' + (creds ? creds.password : '') + '" style="margin-bottom:15px;">';
-    html += '<button type="button" class="btn-admin" onclick="saveCredentials(this)">💾 Save Credentials</button>';
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-function saveCredentials(btnEl) {
-    var username = document.getElementById('cred-username').value.trim();
-    var password = document.getElementById('cred-password').value.trim();
-    if (!username || !password) {
-        showToast('Both fields required!', 'error');
+    if (!user) {
+        container.innerHTML = '<div style="max-width:500px;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:20px;color:#f87171;">No active Firebase Auth session detected.</div>';
         return;
     }
-    setElementLoading(btnEl, true, 'Saving...');
-    var newCreds = { username: username, password: password };
-    console.log('[ADMIN AUTH] Updating Admin Credentials...');
-    pushToFirebase('credentials', newCreds)
-        .then(function() {
-            setData('credentials', newCreds);
-            showToast('Admin credentials updated successfully!');
+
+    user.getIdTokenResult(true)
+        .then(function(tokenResult) {
+            var isAdminClaim = tokenResult.claims && tokenResult.claims.admin === true;
+            var html = '<div style="max-width:600px;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:20px;color:#fff;">';
+            html += '<h4 style="color:#ffd800;margin-top:0;font-weight:800;">🔐 Firebase Authentication & Admin Claim Verification</h4>';
+            html += '<p style="margin:6px 0;"><strong>Active Admin Email:</strong> <span style="color:#4ade80;">' + user.email + '</span></p>';
+            html += '<p style="margin:6px 0;"><strong>UID:</strong> <code style="color:#94a3b8;">' + user.uid + '</code></p>';
+            html += '<p style="margin:6px 0;"><strong>Firebase Project ID:</strong> <span style="color:#60a5fa;">web3-7a4cf</span></p>';
+            html += '<p style="margin:6px 0;"><strong>tokenResult.claims.admin:</strong> <span style="font-weight:bold;color:' + (isAdminClaim ? '#4ade80' : '#f87171') + ';">' + (isAdminClaim ? 'true (VERIFIED)' : 'undefined / false (MISSING)') + '</span></p>';
+
+            if (!isAdminClaim) {
+                html += '<div style="margin-top:12px;background:#451a03;border:1px solid #9a3412;border-radius:8px;padding:12px;font-size:12px;color:#ffedd5;">';
+                html += '⚠️ <strong>Action Required:</strong> The <code>{ admin: true }</code> custom claim is missing for <strong>' + user.email + '</strong>.<br>';
+                html += 'Run this command in your project terminal:<br>';
+                html += '<code style="background:#27272a;padding:3px 8px;border-radius:4px;display:inline-block;margin-top:5px;color:#fde047;">node scripts/set-admin-claim.js ' + user.email + '</code><br>';
+                html += 'Then click <strong>Refresh Auth Token</strong> below.';
+                html += '</div>';
+            }
+
+            html += '<div style="margin-top:15px;display:flex;gap:10px;">';
+            html += '<button type="button" class="btn-admin btn-info" onclick="refreshAdminToken(this)">🔄 Force-Refresh Auth Token</button>';
+            html += '<button type="button" class="btn-admin btn-danger" onclick="logout()">Sign Out</button>';
+            html += '</div>';
+            html += '</div>';
+            container.innerHTML = html;
         })
         .catch(function(err) {
-            console.error('[ADMIN AUTH] Credential update failed:', err);
-            showToast('Database error! Failed to update credentials.', 'error');
+            console.error('[ADMIN AUTH] getIdTokenResult error:', err);
+            container.innerHTML = '<div style="color:#f87171;">Error verifying token claims: ' + err.message + '</div>';
+        });
+}
+
+function refreshAdminToken(btnEl) {
+    var user = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+    if (!user) {
+        showToast('No active user logged in!', 'error');
+        return;
+    }
+    setElementLoading(btnEl, true, 'Refreshing...');
+    user.getIdTokenResult(true)
+        .then(function(tokenResult) {
+            console.log('[FIREBASE AUTH DEBUG] Token force-refreshed.');
+            console.log('[FIREBASE AUTH DEBUG] currentUser.email =', user.email);
+            console.log('[FIREBASE AUTH DEBUG] tokenResult.claims.admin =', tokenResult.claims.admin);
+            if (tokenResult.claims && tokenResult.claims.admin === true) {
+                showToast('Success! Custom claim { admin: true } is active.', 'success');
+            } else {
+                showToast('Warning: { admin: true } claim is missing for ' + user.email, 'error');
+            }
+            renderAdminCredentials();
+        })
+        .catch(function(err) {
+            console.error('[FIREBASE AUTH DEBUG] Refresh error:', err);
+            showToast('Token refresh failed: ' + err.message, 'error');
         })
         .finally(function() {
             setElementLoading(btnEl, false);
@@ -1107,34 +1162,35 @@ function resetData(btnEl) {
 
 function initAdminPage() {
     console.log('[ADMIN INIT] Initializing admin panel page...');
-    if (!checkAuth()) return;
+    checkAuth(function(user) {
+        console.log('[ADMIN INIT] Admin panel loaded for user:', user.email);
+        var primaryGames = getData('games_primary') || [];
+        var secondaryGames = getData('games_secondary') || [];
+        var totalGames = primaryGames.length + secondaryGames.length;
+        
+        var el1 = document.getElementById('stat-total-games');
+        if (el1) el1.textContent = totalGames;
+        var el2 = document.getElementById('stat-primary-games');
+        if (el2) el2.textContent = primaryGames.length;
+        var el3 = document.getElementById('stat-secondary-games');
+        if (el3) el3.textContent = secondaryGames.length;
 
-    var primaryGames = getData('games_primary') || [];
-    var secondaryGames = getData('games_secondary') || [];
-    var totalGames = primaryGames.length + secondaryGames.length;
-    
-    var el1 = document.getElementById('stat-total-games');
-    if (el1) el1.textContent = totalGames;
-    var el2 = document.getElementById('stat-primary-games');
-    if (el2) el2.textContent = primaryGames.length;
-    var el3 = document.getElementById('stat-secondary-games');
-    if (el3) el3.textContent = secondaryGames.length;
+        renderAdminFeatured();
+        renderAdminPrimaryTable();
+        renderAdminSecondaryTable();
+        renderAdminChart('admin-chart1', 'chart1_headers', 'chart1_data', 0);
+        renderAdminChart('admin-chart2', 'chart2_headers', 'chart2_data', 1);
+        renderAdminChart('admin-chart3', 'chart3_headers', 'chart3_data', 2);
+        renderAdminChart('admin-fullchart', 'fullchart_headers', 'fullchart_data', 3);
+        renderAdminChart('admin-prev-fullchart', 'prev_fullchart_headers', 'prev_fullchart_data', 4);
+        renderAdminMarquee();
+        renderAdminHindiText();
+        renderAdminAdContent();
+        renderAdminDisclaimer();
+        renderAdminFirebase();
+        renderAdminCredentials();
 
-    renderAdminFeatured();
-    renderAdminPrimaryTable();
-    renderAdminSecondaryTable();
-    renderAdminChart('admin-chart1', 'chart1_headers', 'chart1_data', 0);
-    renderAdminChart('admin-chart2', 'chart2_headers', 'chart2_data', 1);
-    renderAdminChart('admin-chart3', 'chart3_headers', 'chart3_data', 2);
-    renderAdminChart('admin-fullchart', 'fullchart_headers', 'fullchart_data', 3);
-    renderAdminChart('admin-prev-fullchart', 'prev_fullchart_headers', 'prev_fullchart_data', 4);
-    renderAdminMarquee();
-    renderAdminHindiText();
-    renderAdminAdContent();
-    renderAdminDisclaimer();
-    renderAdminFirebase();
-    renderAdminCredentials();
-
-    switchTab('results');
-    console.log('[ADMIN INIT] Admin panel loaded successfully.');
+        switchTab('results');
+        console.log('[ADMIN INIT] Admin panel loaded successfully.');
+    });
 }

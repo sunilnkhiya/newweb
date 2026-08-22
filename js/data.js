@@ -3,10 +3,7 @@
 // Database-first, ID-driven state management
 // ============================================================
 
-const DEFAULT_CREDENTIALS = {
-    username: (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ADMIN_USERNAME) ? window.ENV_CONFIG.ADMIN_USERNAME : "Adminx285",
-    password: (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ADMIN_PASSWORD) ? window.ENV_CONFIG.ADMIN_PASSWORD : "Admin@2805"
-};
+
 
 function generateUniqueId(prefix) {
     prefix = prefix || 'rec';
@@ -265,14 +262,6 @@ function initData(forceReset) {
             localStorage.setItem('a7_' + key, JSON.stringify(updated));
         }
     });
-
-    // Sync credentials from ENV_CONFIG if present
-    if (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ADMIN_USERNAME) {
-        localStorage.setItem('a7_credentials', JSON.stringify({
-            username: window.ENV_CONFIG.ADMIN_USERNAME,
-            password: window.ENV_CONFIG.ADMIN_PASSWORD
-        }));
-    }
 }
 
 function getData(key) {

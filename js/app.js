@@ -394,20 +394,53 @@ function initLoginPage() {
     if (form) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('username').value.trim();
             const password = document.getElementById('user_pass').value.trim();
-            const creds = getData('credentials');
+            const errEl = document.getElementById('login-error');
+            const submitBtn = form.querySelector('input[type="submit"]');
 
-            if (creds && username === creds.username && password === creds.password) {
-                sessionStorage.setItem('a7_logged_in', 'true');
-                window.location.href = 'admin.html';
-            } else {
-                const errEl = document.getElementById('login-error');
+            if (errEl) errEl.style.display = 'none';
+
+            if (!email || !password) {
                 if (errEl) {
-                    errEl.textContent = 'Invalid username or password!';
+                    errEl.textContent = 'Please enter both Email and Password!';
                     errEl.style.display = 'block';
                 }
+                return;
             }
+
+            if (typeof firebase === 'undefined' || !firebase.auth) {
+                if (errEl) {
+                    errEl.textContent = 'Firebase Authentication SDK not loaded.';
+                    errEl.style.display = 'block';
+                }
+                return;
+            }
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.value = 'LOGGING IN...';
+            }
+
+            console.log('[FIREBASE AUTH] Attempting admin login for:', email);
+            firebase.auth().signInWithEmailAndPassword(email, password)
+                .then(function(userCredential) {
+                    console.log('[FIREBASE AUTH] Admin login successful:', userCredential.user.email);
+                    window.location.href = 'admin.html';
+                })
+                .catch(function(error) {
+                    console.error('[FIREBASE AUTH] Login failed:', error);
+                    if (errEl) {
+                        errEl.textContent = error.message || 'Invalid email or password!';
+                        errEl.style.display = 'block';
+                    }
+                })
+                .finally(function() {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.value = 'LOGIN';
+                    }
+                });
         });
     }
 
