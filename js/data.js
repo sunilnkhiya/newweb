@@ -232,7 +232,6 @@ function ensureUniqueIds(list, prefix) {
 
 function initData(forceReset) {
     if (forceReset || !localStorage.getItem('a7_initialized_v12')) {
-        localStorage.setItem('a7_credentials', JSON.stringify(DEFAULT_CREDENTIALS));
         localStorage.setItem('a7_games_primary', JSON.stringify(ensureUniqueIds(DEFAULT_GAMES_PRIMARY, 'gm_p')));
         localStorage.setItem('a7_games_secondary', JSON.stringify(ensureUniqueIds(DEFAULT_GAMES_SECONDARY, 'gm_s')));
         localStorage.setItem('a7_featured', JSON.stringify(DEFAULT_FEATURED));
