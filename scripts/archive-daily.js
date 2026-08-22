@@ -1,4 +1,5 @@
-const admin = require('firebase-admin');
+const { initializeApp, cert, getApps } = require('firebase-admin/app');
+const { getDatabase } = require('firebase-admin/database');
 const path = require('path');
 
 // 1. Initialize Firebase Admin SDK using Environment Secret or Local Fallback File
@@ -25,9 +26,9 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     }
 }
 
-if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+if (getApps().length === 0) {
+    initializeApp({
+        credential: cert(serviceAccount),
         databaseURL: "https://web3-7a4cf-default-rtdb.firebaseio.com/"
     });
 }
@@ -164,7 +165,7 @@ function getCanonicalGameKey(gameObj) {
 // 4. Main Archive Execution Function
 async function main() {
     try {
-        const db = admin.database();
+        const db = getDatabase();
         const rootRef = db.ref('a7satta');
 
         const customDateArg = process.argv[2] || null;
