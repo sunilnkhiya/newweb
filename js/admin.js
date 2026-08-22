@@ -729,6 +729,66 @@ function deleteChartColumn(chartIndex, colIndex, btnEl) {
     });
 }
 
+// --- Top Game Display Names Editor ---
+
+function renderAdminTopGameNames() {
+    var container = document.getElementById('admin-top-game-names');
+    if (!container) return;
+
+    var primary = getData('games_primary') || [];
+    var html = '<div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:20px;">';
+    html += '<p style="color:#64748b;font-size:13px;margin-bottom:15px;">Update the displayed title for each game in the top homepage table. Result numbers, timings, and internal IDs remain 100% unchanged.</p>';
+
+    html += '<div class="table-scroll"><table class="admin-table">';
+    html += '<thead><tr><th style="width:50px;">#</th><th style="width:140px;">Internal ID</th><th>Displayed Game Name (दृश्य नाम)</th><th style="width:120px;">Scheduled Time</th></tr></thead>';
+    html += '<tbody>';
+
+    primary.forEach(function(g, idx) {
+        html += '<tr>';
+        html += '<td>' + (idx + 1) + '</td>';
+        html += '<td style="color:#64748b;font-family:monospace;font-size:12px;">' + (g.id || g.slug || '-') + '</td>';
+        html += '<td><input class="admin-input" id="top-game-name-' + idx + '" value="' + (g.name || '') + '" placeholder="Enter Game Display Name"></td>';
+        html += '<td style="color:#64748b;font-size:12px;">' + (g.time || '-') + '</td>';
+        html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+
+    html += '<div style="margin-top:20px;text-align:right;">';
+    html += '<button type="button" class="btn-admin" onclick="saveAdminTopGameNames(this)" style="padding:12px 35px;font-size:15px;font-weight:900;">💾 Save & Update Top Game Names</button>';
+    html += '</div>';
+
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
+function saveAdminTopGameNames(btnEl) {
+    var primary = getData('games_primary') || [];
+    var updatedPrimary = primary.map(function(g, idx) {
+        var inputEl = document.getElementById('top-game-name-' + idx);
+        var newName = inputEl ? inputEl.value.trim() : g.name;
+        return Object.assign({}, g, { name: newName || g.name });
+    });
+
+    setElementLoading(btnEl, true, 'Saving...');
+
+    pushToFirebase('games_primary', updatedPrimary)
+        .then(function() {
+            setData('games_primary', updatedPrimary);
+            showToast('Top Game Names updated successfully!');
+            renderAdminTopGameNames();
+            renderAdminPrimaryResults();
+        })
+        .catch(function(err) {
+            console.error('[TOP GAME NAMES] Save failed:', err);
+            showToast('Database error! Update failed.', 'error');
+        })
+        .finally(function() {
+            setElementLoading(btnEl, false);
+        });
+}
+
 // --- Marquee Editor ---
 
 function renderAdminMarquee() {
@@ -1184,6 +1244,7 @@ function initAdminPage() {
         renderAdminChart('admin-fullchart', 'fullchart_headers', 'fullchart_data', 3);
         renderAdminChart('admin-prev-fullchart', 'prev_fullchart_headers', 'prev_fullchart_data', 4);
         renderAdminYearChart();
+        renderAdminTopGameNames();
         renderAdminMarquee();
         renderAdminHindiText();
         renderAdminAdContent();
