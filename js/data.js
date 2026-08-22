@@ -11,20 +11,20 @@ function generateUniqueId(prefix) {
 }
 
 const DEFAULT_GAMES_PRIMARY = [
-    { id: "gm_mumbai-day",    name: "मुंबई डे",    slug: "mumbai-day",    time: "12:30 PM", yesterday: "--", today: "" },
-    { id: "gm_sadar-bazar",   name: "सदर बाजार",  slug: "sadar-bazar",   time: "01:20 PM", yesterday: "--", today: "" },
-    { id: "gm_gwalior",       name: "ग्वालियर",   slug: "gwalior",        time: "02:20 PM", yesterday: "--", today: "" },
+    { id: "gm_mumbai-day",    name: "चेन्नई डे",    slug: "mumbai-day",    time: "12:30 PM", yesterday: "--", today: "" },
+    { id: "gm_sadar-bazar",   name: "सदर बाजार",  slug: "sadar-bazar",   time: "01:25 PM", yesterday: "--", today: "" },
+    { id: "gm_gwalior",       name: "ग्वालियर",   slug: "gwalior",        time: "02:25 PM", yesterday: "--", today: "" },
     { id: "gm_delhi-bazar",   name: "दिल्ली बाजार",slug: "delhi-bazar",   time: "03:00 PM", yesterday: "--", today: "" },
-    { id: "gm_bhopal-city",   name: "भोपाल सिटी", slug: "bhopal-city",    time: "03:50 PM", yesterday: "--", today: "" },
-    { id: "gm_shree-ganesh",  name: "श्री गणेश",  slug: "shree-ganesh",   time: "04:20 PM", yesterday: "--", today: "" },
-    { id: "gm_jaipur-city",   name: "जयपुर सिटी", slug: "jaipur-city",    time: "05:15 PM", yesterday: "--", today: "" },
+    { id: "gm_bhopal-city",   name: "उदयपुर टाउन", slug: "bhopal-city",    time: "03:40 PM", yesterday: "--", today: "" },
+    { id: "gm_shree-ganesh",  name: "श्री गणेश",  slug: "shree-ganesh",   time: "04:25 PM", yesterday: "--", today: "" },
+    { id: "gm_jaipur-city",   name: "बॉम्बे सिटी", slug: "jaipur-city",    time: "05:15 PM", yesterday: "--", today: "" },
     { id: "gm_faridabad",     name: "फरीदाबाद",   slug: "faridabad",      time: "05:50 PM", yesterday: "--", today: "" },
-    { id: "gm_surat",         name: "सूरत",       slug: "surat",           time: "06:45 PM", yesterday: "--", today: "" },
+    { id: "gm_surat",         name: "देहरादून बाजार", slug: "surat",      time: "06:40 PM", yesterday: "--", today: "" },
     { id: "gm_alwar",         name: "अलवर",       slug: "alwar",           time: "07:20 PM", yesterday: "--", today: "" },
-    { id: "gm_gaziyabad",     name: "गाज़ियाबाद", slug: "gaziyabad",       time: "09:30 PM", yesterday: "--", today: "" },
-    { id: "gm_pune-night",    name: "पुणे नाईट",  slug: "pune-night",     time: "10:30 PM", yesterday: "--", today: "" },
-    { id: "gm_gali",          name: "गली",        slug: "gali",            time: "11:30 PM", yesterday: "--", today: "" },
-    { id: "gm_disawar",       name: "दिसावर",     slug: "disawar",         time: "03:00 AM", yesterday: "--", today: "" }
+    { id: "gm_gaziyabad",     name: "गाज़ियाबाद", slug: "gaziyabad",       time: "09:40 PM", yesterday: "--", today: "" },
+    { id: "gm_pune-night",    name: "अयोध्या नगरी", slug: "pune-night",    time: "10:20 PM", yesterday: "--", today: "" },
+    { id: "gm_gali",          name: "गली",        slug: "gali",            time: "11:40 PM", yesterday: "--", today: "" },
+    { id: "gm_disawar",       name: "दिसावर",     slug: "disawar",         time: "01:30 AM", yesterday: "--", today: "" }
 ];
 
 const DEFAULT_GAMES_SECONDARY = [];
@@ -46,20 +46,20 @@ const DEFAULT_AD_SCHEDULE = {
     topHeader: "--सीधे सट्टा कंपनी का No 1 खाईवाल--",
     khaiwalName: "",
     items: [
-        { id: "ad_1", name: "मुंबई डे",    time: "12:30 PM" },
-        { id: "ad_2", name: "सदर बाजार",  time: "01:20 PM" },
-        { id: "ad_3", name: "ग्वालियर",   time: "02:20 PM" },
+        { id: "ad_1", name: "चेन्नई डे",    time: "12:30 PM" },
+        { id: "ad_2", name: "सदर बाजार",  time: "01:25 PM" },
+        { id: "ad_3", name: "ग्वालियर",   time: "02:25 PM" },
         { id: "ad_4", name: "दिल्ली बाजार",time: "03:00 PM" },
-        { id: "ad_5", name: "भोपाल सिटी", time: "03:50 PM" },
-        { id: "ad_6", name: "श्री गणेश",  time: "04:20 PM" },
-        { id: "ad_7", name: "जयपुर सिटी", time: "05:15 PM" },
+        { id: "ad_5", name: "उदयपुर टाउन", time: "03:40 PM" },
+        { id: "ad_6", name: "श्री गणेश",  time: "04:25 PM" },
+        { id: "ad_7", name: "बॉम्बे सिटी", time: "05:15 PM" },
         { id: "ad_8", name: "फरीदाबाद",   time: "05:50 PM" },
-        { id: "ad_9", name: "सूरत",       time: "06:45 PM" },
+        { id: "ad_9", name: "देहरादून बाजार", time: "06:40 PM" },
         { id: "ad_10", name: "अलवर",       time: "07:20 PM" },
-        { id: "ad_11", name: "गाज़ियाबाद", time: "09:30 PM" },
-        { id: "ad_12", name: "पुणे नाईट",  time: "10:30 PM" },
-        { id: "ad_13", name: "गली",        time: "11:30 PM" },
-        { id: "ad_14", name: "दिसावर",     time: "03:00 AM" }
+        { id: "ad_11", name: "गाज़ियाबाद", time: "09:40 PM" },
+        { id: "ad_12", name: "अयोध्या नगरी", time: "10:20 PM" },
+        { id: "ad_13", name: "गली",        time: "11:40 PM" },
+        { id: "ad_14", name: "दिसावर",     time: "01:30 AM" }
     ],
     rateTitle: "? Rate list ?",
     jodiRate: "जोड़ी रेट 10-------960",
@@ -132,7 +132,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Chart 1: Green table — games 1–5
-const DEFAULT_CHART1_HEADERS = ["मुंबई डे", "सदर बाजार", "ग्वालियर", "दिल्ली बाजार", "भोपाल सिटी"];
+const DEFAULT_CHART1_HEADERS = ["चेन्नई डे", "सदर बाजार", "ग्वालियर", "दिल्ली बाजार", "उदयपुर टाउन"];
 const DEFAULT_CHART1_DATA = [
     { id: "c1_r0108", date: "01-08", values: ["-", "-", "-", "-", "-"] },
     { id: "c1_r0208", date: "02-08", values: ["-", "-", "-", "-", "-"] },
@@ -143,7 +143,7 @@ const DEFAULT_CHART1_DATA = [
 ];
 
 // Chart 2: Blue table — games 6–10
-const DEFAULT_CHART2_HEADERS = ["श्री गणेश", "जयपुर सिटी", "फरीदाबाद", "सूरत", "अलवर"];
+const DEFAULT_CHART2_HEADERS = ["श्री गणेश", "बॉम्बे सिटी", "फरीदाबाद", "देहरादून बाजार", "अलवर"];
 const DEFAULT_CHART2_DATA = [
     { id: "c2_r0108", date: "01-08", values: ["-", "-", "-", "-", "-"] },
     { id: "c2_r0208", date: "02-08", values: ["-", "-", "-", "-", "-"] },
@@ -154,7 +154,7 @@ const DEFAULT_CHART2_DATA = [
 ];
 
 // Chart 3: Orange table — games 11–14
-const DEFAULT_CHART3_HEADERS = ["गाज़ियाबाद", "पुणे नाईट", "गली", "दिसावर"];
+const DEFAULT_CHART3_HEADERS = ["गाज़ियाबाद", "अयोध्या नगरी", "गली", "दिसावर"];
 const DEFAULT_CHART3_DATA = [
     { id: "c3_r0108", date: "01-08", values: ["-", "-", "-", "-"] },
     { id: "c3_r0208", date: "02-08", values: ["-", "-", "-", "-"] },
@@ -166,9 +166,9 @@ const DEFAULT_CHART3_DATA = [
 
 // Full chart page data — all 14 games
 const DEFAULT_FULLCHART_HEADERS = [
-    "मुंबई डे", "सदर बाजार", "ग्वालियर", "दिल्ली बाजार",
-    "भोपाल सिटी", "श्री गणेश", "जयपुर सिटी", "फरीदाबाद",
-    "सूरत", "अलवर", "गाज़ियाबाद", "पुणे नाईट",
+    "चेन्नई डे", "सदर बाजार", "ग्वालियर", "दिल्ली बाजार",
+    "उदयपुर टाउन", "श्री गणेश", "बॉम्बे सिटी", "फरीदाबाद",
+    "देहरादून बाजार", "अलवर", "गाज़ियाबाद", "अयोध्या नगरी",
     "गली", "दिसावर"
 ];
 
@@ -286,7 +286,7 @@ function ensureUniqueIds(list, prefix) {
 }
 
 function initData(forceReset) {
-    if (forceReset || !localStorage.getItem('a7_initialized_v12')) {
+    if (forceReset || !localStorage.getItem('a7_initialized_v13')) {
         localStorage.setItem('a7_games_primary', JSON.stringify(ensureUniqueIds(DEFAULT_GAMES_PRIMARY, 'gm_p')));
         localStorage.setItem('a7_games_secondary', JSON.stringify(ensureUniqueIds(DEFAULT_GAMES_SECONDARY, 'gm_s')));
         localStorage.setItem('a7_featured', JSON.stringify(DEFAULT_FEATURED));
@@ -307,7 +307,7 @@ function initData(forceReset) {
         localStorage.setItem('a7_year_chart_headers', JSON.stringify(DEFAULT_YEAR_CHART_HEADERS));
         localStorage.setItem('a7_year_chart_data', JSON.stringify(ensureUniqueIds(DEFAULT_YEAR_CHART_DATA, 'yc_r')));
         localStorage.setItem('a7_disclaimer', DEFAULT_DISCLAIMER);
-        localStorage.setItem('a7_initialized_v12', 'true');
+        localStorage.setItem('a7_initialized_v13', 'true');
     }
 
     if (!localStorage.getItem('a7_year_chart_headers')) {
