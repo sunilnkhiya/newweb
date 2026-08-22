@@ -359,9 +359,14 @@ function initHomePage() {
 }
 
 let currentYearFilter = 'ALL';
+let currentMonthFilter = 'ALL';
 
 function filterYearChart(year, btnEl) {
-    currentYearFilter = year || 'ALL';
+    currentYearFilter = year;
+    currentMonthFilter = 'ALL';
+    const selectEl = document.getElementById('month-filter-select');
+    if (selectEl) selectEl.value = 'ALL';
+
     const buttons = document.querySelectorAll('.btn-year-filter');
     buttons.forEach(btn => {
         btn.classList.remove('active');
@@ -375,6 +380,11 @@ function filterYearChart(year, btnEl) {
         btnEl.style.color = '#000';
         btnEl.style.border = 'none';
     }
+    renderYearChart();
+}
+
+function filterMonthChart(monthVal) {
+    currentMonthFilter = monthVal || 'ALL';
     renderYearChart();
 }
 
@@ -395,7 +405,7 @@ function renderYearChart() {
         return;
     }
 
-    // Apply Year Filtering (2025, 2026, or ALL)
+    // Apply Year & Month Filtering
     let filteredData = data;
     if (currentYearFilter === '2025') {
         filteredData = data.filter(r => r && r.date && (r.date.includes('2025') || r.date.endsWith('-25')));
@@ -403,10 +413,14 @@ function renderYearChart() {
         filteredData = data.filter(r => r && r.date && (r.date.includes('2026') || r.date.endsWith('-26')));
     }
 
+    if (currentMonthFilter && currentMonthFilter !== 'ALL') {
+        filteredData = filteredData.filter(r => r && r.date && r.date.includes(currentMonthFilter));
+    }
+
     if (filteredData.length === 0) {
         table.style.display = 'none';
         if (emptyMsg) {
-            emptyMsg.textContent = 'No Year Chart data found for year ' + currentYearFilter + '.';
+            emptyMsg.textContent = 'No Year Chart data found for the selected filter.';
             emptyMsg.style.display = 'block';
         }
         return;
@@ -415,8 +429,14 @@ function renderYearChart() {
     table.style.display = 'table';
     if (emptyMsg) emptyMsg.style.display = 'none';
 
+    const monthNames = {
+        '01': 'JANUARY', '02': 'FEBRUARY', '03': 'MARCH', '04': 'APRIL',
+        '05': 'MAY', '06': 'JUNE', '07': 'JULY', '08': 'AUGUST',
+        '09': 'SEPTEMBER', '10': 'OCTOBER', '11': 'NOVEMBER', '12': 'DECEMBER'
+    };
+
     let html = '<tbody>';
-    // Header row
+    // Table Column Header Row
     html += '<tr>';
     html += '<td class="table_chart_section_01 forfirtcolor"><strong class="fon">दिनांक</strong></td>';
     headers.forEach(h => {
@@ -424,10 +444,34 @@ function renderYearChart() {
     });
     html += '</tr>';
 
-    // Data rows
+    // Data rows with Month Section Banners
+    let lastMonthKey = '';
     filteredData.forEach(row => {
+        const dateStr = row.date || '';
+        // Extract MM-YYYY from DD-MM-YYYY
+        const parts = dateStr.split('-');
+        let monthKey = '';
+        let monthTitle = '';
+
+        if (parts.length === 3) {
+            const mNum = parts[1];
+            const yNum = parts[2];
+            monthKey = mNum + '-' + yNum;
+            const mName = monthNames[mNum] || ('MONTH ' + mNum);
+            monthTitle = `📅 ${mName} ${yNum} RESULT CHART`;
+        }
+
+        if (monthKey && monthKey !== lastMonthKey) {
+            lastMonthKey = monthKey;
+            html += `<tr class="month-banner-row">
+                <td colspan="${headers.length + 1}" style="background:#1e293b;color:#ffd800;font-weight:900;text-align:center;font-size:15px;padding:10px;border:1px solid #334155;letter-spacing:1px;text-transform:uppercase;">
+                    ${monthTitle}
+                </td>
+            </tr>`;
+        }
+
         html += '<tr>';
-        html += `<td class="forfirtcolor"><span class="fon">${row.date || ''}</span></td>`;
+        html += `<td class="forfirtcolor"><span class="fon">${dateStr}</span></td>`;
         const values = Array.isArray(row.values) ? row.values : [];
         headers.forEach((h, idx) => {
             const val = values[idx] !== undefined && values[idx] !== null && values[idx] !== '' ? values[idx] : '-';

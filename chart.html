@@ -114,10 +114,37 @@
         <div class="row">
             <div class="col-md-12 text-center">
                 <h1>YEAR CHART 2025-2026</h1>
-                <div class="year-filter-bar" style="margin-top:15px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
+                <div class="year-filter-bar" style="margin-top:15px;display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;">
                     <button type="button" class="btn-year-filter active" onclick="filterYearChart('ALL', this)" style="background:#ffd800;color:#000;border:none;padding:8px 18px;border-radius:6px;font-weight:800;font-size:14px;cursor:pointer;transition:all 0.2s;">ALL (2025-2026)</button>
                     <button type="button" class="btn-year-filter" onclick="filterYearChart('2025', this)" style="background:#1e293b;color:#ffd800;border:1px solid #ffd800;padding:8px 18px;border-radius:6px;font-weight:800;font-size:14px;cursor:pointer;transition:all 0.2s;">2025</button>
                     <button type="button" class="btn-year-filter" onclick="filterYearChart('2026', this)" style="background:#1e293b;color:#ffd800;border:1px solid #ffd800;padding:8px 18px;border-radius:6px;font-weight:800;font-size:14px;cursor:pointer;transition:all 0.2s;">2026</button>
+
+                    <select id="month-filter-select" onchange="filterMonthChart(this.value)" style="background:#1e293b;color:#ffd800;border:1px solid #ffd800;padding:8px 14px;border-radius:6px;font-weight:800;font-size:14px;cursor:pointer;">
+                        <option value="ALL">All Months (Jan 2025 – Jul 2026)</option>
+                        <optgroup label="2026 Months">
+                            <option value="-01-2026">January 2026</option>
+                            <option value="-02-2026">February 2026</option>
+                            <option value="-03-2026">March 2026</option>
+                            <option value="-04-2026">April 2026</option>
+                            <option value="-05-2026">May 2026</option>
+                            <option value="-06-2026">June 2026</option>
+                            <option value="-07-2026">July 2026</option>
+                        </optgroup>
+                        <optgroup label="2025 Months">
+                            <option value="-01-2025">January 2025</option>
+                            <option value="-02-2025">February 2025</option>
+                            <option value="-03-2025">March 2025</option>
+                            <option value="-04-2025">April 2025</option>
+                            <option value="-05-2025">May 2025</option>
+                            <option value="-06-2025">June 2025</option>
+                            <option value="-07-2025">July 2025</option>
+                            <option value="-08-2025">August 2025</option>
+                            <option value="-09-2025">September 2025</option>
+                            <option value="-10-2025">October 2025</option>
+                            <option value="-11-2025">November 2025</option>
+                            <option value="-12-2025">December 2025</option>
+                        </optgroup>
+                    </select>
                 </div>
             </div>
         </div>

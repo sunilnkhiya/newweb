@@ -286,7 +286,7 @@ function ensureUniqueIds(list, prefix) {
 }
 
 function initData(forceReset) {
-    if (forceReset || !localStorage.getItem('a7_initialized_v13')) {
+    if (forceReset || !localStorage.getItem('a7_initialized_v14')) {
         localStorage.setItem('a7_games_primary', JSON.stringify(ensureUniqueIds(DEFAULT_GAMES_PRIMARY, 'gm_p')));
         localStorage.setItem('a7_games_secondary', JSON.stringify(ensureUniqueIds(DEFAULT_GAMES_SECONDARY, 'gm_s')));
         localStorage.setItem('a7_featured', JSON.stringify(DEFAULT_FEATURED));
@@ -307,7 +307,7 @@ function initData(forceReset) {
         localStorage.setItem('a7_year_chart_headers', JSON.stringify(DEFAULT_YEAR_CHART_HEADERS));
         localStorage.setItem('a7_year_chart_data', JSON.stringify(ensureUniqueIds(DEFAULT_YEAR_CHART_DATA, 'yc_r')));
         localStorage.setItem('a7_disclaimer', DEFAULT_DISCLAIMER);
-        localStorage.setItem('a7_initialized_v13', 'true');
+        localStorage.setItem('a7_initialized_v14', 'true');
     }
 
     if (!localStorage.getItem('a7_year_chart_headers')) {
