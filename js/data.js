@@ -220,36 +220,45 @@ const DEFAULT_PREV_FULLCHART_DATA = [
 function generateSampleYearChartData() {
     const rows = [];
     const gameCount = 14;
-    const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
-    
-    // 2025 sample records
-    months.forEach((m) => {
-        for (let d = 1; d <= 3; d++) {
-            const dayStr = '0' + d;
+    const daysInMonth2025 = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]; // Jan-Dec 2025
+    const daysInMonth2026 = [31, 28, 31, 30, 31, 30, 31]; // Jan-Jul 2026
+
+    let seed = 12345;
+    function pseudoRandom() {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+    }
+
+    // 1. Generate ALL 12 months for 2025 (Jan 01 - Dec 31, 2025)
+    daysInMonth2025.forEach((maxDays, monthIdx) => {
+        const m = (monthIdx + 1) < 10 ? '0' + (monthIdx + 1) : String(monthIdx + 1);
+        for (let d = 1; d <= maxDays; d++) {
+            const dayStr = d < 10 ? '0' + d : String(d);
             const values = [];
             for (let g = 0; g < gameCount; g++) {
-                const num = Math.floor(Math.random() * 99) + 1;
+                const num = Math.floor(pseudoRandom() * 99) + 1;
                 values.push(num < 10 ? '0' + num : String(num));
             }
             rows.push({
-                id: 'yc_2025_' + m + dayStr,
+                id: 'yc_2025_' + m + '_' + dayStr,
                 date: dayStr + '-' + m + '-2025',
                 values: values
             });
         }
     });
 
-    // 2026 sample records (6 months: Jan - Jun)
-    months.slice(0, 6).forEach((m) => {
-        for (let d = 1; d <= 3; d++) {
-            const dayStr = '0' + d;
+    // 2. Generate 7 months for 2026 (Jan 01 - Jul 31, 2026)
+    daysInMonth2026.forEach((maxDays, monthIdx) => {
+        const m = (monthIdx + 1) < 10 ? '0' + (monthIdx + 1) : String(monthIdx + 1);
+        for (let d = 1; d <= maxDays; d++) {
+            const dayStr = d < 10 ? '0' + d : String(d);
             const values = [];
             for (let g = 0; g < gameCount; g++) {
-                const num = Math.floor(Math.random() * 99) + 1;
+                const num = Math.floor(pseudoRandom() * 99) + 1;
                 values.push(num < 10 ? '0' + num : String(num));
             }
             rows.push({
-                id: 'yc_2026_' + m + dayStr,
+                id: 'yc_2026_' + m + '_' + dayStr,
                 date: dayStr + '-' + m + '-2026',
                 values: values
             });
