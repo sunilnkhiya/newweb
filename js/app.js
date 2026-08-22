@@ -278,39 +278,24 @@ function renderRecordChart() {
     const container = document.getElementById('record-chart-table');
     if (!container) return;
 
-    const games = [
-        { name: "फरीदाबाद", slug: "faridabad" },
-        { name: "गाजियाबाद", slug: "gaziyabad" },
-        { name: "गली", slug: "gali" },
-        { name: "दिल्ली बाजार", slug: "delhi-bazar" },
-        { name: "श्री गणेश", slug: "shree-ganesh" },
-        { name: "दिसावर", slug: "disawar" },
-        { name: "ताजपुर", slug: "tajpur" },
-        { name: "जयपुर सिटी", slug: "jaipur-city" },
-        { name: "सदर बाजार", slug: "sadar-bazar" },
-        { name: "ग्वालियर", slug: "gwalior" },
-        { name: "अलवर", slug: "alwar" },
-        { name: "बैंगलोर नाइट", slug: "banglor-night" },
-        { name: "नोएडा दरबार", slug: "noida-darbar" },
-        { name: "आगरा सिटी", slug: "agra-city" },
-        { name: "द्वारका दरबार", slug: "dwarka-darbar" },
-        { name: "कानपुर डे", slug: "kanpur-day" },
-        { name: "गुलाबी नगरी", slug: "gulabi-nagri" },
-        { name: "मथुरा एक्सप्रेस", slug: "mathura-express" },
-        { name: "सदर मटका", slug: "sadar-matka" },
-        { name: "अलवर मटका", slug: "alwar-matka" }
-    ];
+    const games = (typeof DEFAULT_FULLCHART_HEADERS !== 'undefined' ? DEFAULT_FULLCHART_HEADERS : [
+        "मुंबई डे", "सदर बाजार", "ग्वालियर", "दिल्ली बाजार",
+        "भोपाल सिटी", "श्री गणेश", "जयपुर सिटी", "फरीदाबाद",
+        "सूरत", "अलवर", "गाज़ियाबाद", "पुणे नाईट",
+        "गली", "दिसावर"
+    ]);
 
     const years = [2026, 2025, 2024, 2023];
-    let html = '';
-    games.forEach(game => {
+    let html = '<tbody>';
+    games.forEach(gameName => {
         html += '<tr>';
-        html += `<td class="table_chart_section2">${game.name}</td>`;
+        html += `<td style="background-color:#1e293b;color:#ffd800;font-weight:800;text-align:center;padding:12px 8px;width:30%;border:1px solid #334155;font-size:14px;">${gameName}</td>`;
         years.forEach(year => {
-            html += `<td class="table_chart_section"><a href="#">${year}</a></td>`;
+            html += `<td style="text-align:center;padding:12px 8px;background:#ffffff;border:1px solid #cbd5e1;width:17.5%;"><a href="chart.html" style="color:#007bff;font-weight:800;font-size:15px;text-decoration:none;display:block;">${year}</a></td>`;
         });
         html += '</tr>';
     });
+    html += '</tbody>';
     container.innerHTML = html;
 }
 
@@ -369,6 +354,7 @@ function initHomePage() {
     renderChart('chart1-table', 'chart1_headers', 'chart1_data', '#dbec95');
     renderChart('chart2-table', 'chart2_headers', 'chart2_data', '#95ceec');
     renderChart('chart3-table', 'chart3_headers', 'chart3_data', '#f0c987');
+    renderRecordChart();
 }
 
 let currentYearFilter = 'ALL';

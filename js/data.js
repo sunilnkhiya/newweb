@@ -217,9 +217,51 @@ const DEFAULT_PREV_FULLCHART_DATA = [
     { id: "pfc_r3107", date: "31-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] }
 ];
 
+function generateSampleYearChartData() {
+    const rows = [];
+    const gameCount = 14;
+    const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+    
+    // 2025 sample records
+    months.forEach((m) => {
+        for (let d = 1; d <= 3; d++) {
+            const dayStr = '0' + d;
+            const values = [];
+            for (let g = 0; g < gameCount; g++) {
+                const num = Math.floor(Math.random() * 99) + 1;
+                values.push(num < 10 ? '0' + num : String(num));
+            }
+            rows.push({
+                id: 'yc_2025_' + m + dayStr,
+                date: dayStr + '-' + m + '-2025',
+                values: values
+            });
+        }
+    });
+
+    // 2026 sample records (6 months: Jan - Jun)
+    months.slice(0, 6).forEach((m) => {
+        for (let d = 1; d <= 3; d++) {
+            const dayStr = '0' + d;
+            const values = [];
+            for (let g = 0; g < gameCount; g++) {
+                const num = Math.floor(Math.random() * 99) + 1;
+                values.push(num < 10 ? '0' + num : String(num));
+            }
+            rows.push({
+                id: 'yc_2026_' + m + dayStr,
+                date: dayStr + '-' + m + '-2026',
+                values: values
+            });
+        }
+    });
+
+    return rows;
+}
+
 // Year Chart 2025–2026 data structures
 const DEFAULT_YEAR_CHART_HEADERS = DEFAULT_FULLCHART_HEADERS;
-const DEFAULT_YEAR_CHART_DATA = [];
+const DEFAULT_YEAR_CHART_DATA = generateSampleYearChartData();
 
 const DEFAULT_DISCLAIMER = "!! DISCLAIMER:- This is a demo website. Viewing This Website Is Your Own Risk, All The Information Shown On Website Is Sponsored And We Warn You That Matka Gambling/Satta May Be Banned Or Illegal In Your Country..., We Are Not Responsible For Any Issues Or Scam..., We Respect All Country Rules/Laws... If You Not Agree With Our Site Disclaimer... Please Quit Our Site Right Now. Thank You.";
 
