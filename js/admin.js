@@ -1183,6 +1183,7 @@ function initAdminPage() {
         renderAdminChart('admin-chart3', 'chart3_headers', 'chart3_data', 2);
         renderAdminChart('admin-fullchart', 'fullchart_headers', 'fullchart_data', 3);
         renderAdminChart('admin-prev-fullchart', 'prev_fullchart_headers', 'prev_fullchart_data', 4);
+        renderAdminYearChart();
         renderAdminMarquee();
         renderAdminHindiText();
         renderAdminAdContent();
@@ -1192,5 +1193,421 @@ function initAdminPage() {
 
         switchTab('results');
         console.log('[ADMIN INIT] Admin panel loaded successfully.');
+    });
+}
+
+// ============================================================
+// Year Chart 2025-2026 Admin Management & Bulk CSV Importer
+// ============================================================
+
+var yearChartCSVPreviewData = null;
+
+function renderAdminYearChart() {
+    var thead = document.getElementById('admin-yearchart-head');
+    var tbody = document.getElementById('admin-yearchart-body');
+    if (!thead || !tbody) return;
+
+    var headers = getData('year_chart_headers') || (typeof DEFAULT_YEAR_CHART_HEADERS !== 'undefined' ? DEFAULT_YEAR_CHART_HEADERS : []);
+    var data = getData('year_chart_data') || [];
+
+    // Render Table Head
+    var headHtml = '<tr>';
+    headHtml += '<th style="width:40px;text-align:center;"><input type="checkbox" onchange="toggleSelectAllYearChartRows(this)"></th>';
+    headHtml += '<th style="width:120px;color:#ffd800;">Date</th>';
+    headers.forEach(function(h, idx) {
+        headHtml += '<th style="text-align:center;min-width:110px;">';
+        headHtml += '<div style="display:flex;align-items:center;justify-content:center;gap:4px;">';
+        headHtml += '<span>' + h + '</span>';
+        headHtml += '<button type="button" class="btn-admin-icon" onclick="editYearChartHeader(' + idx + ', \'' + escapeQuotes(h) + '\')" title="Rename Game">✏️</button>';
+        headHtml += '<button type="button" class="btn-admin-icon btn-danger" onclick="deleteYearChartColumn(' + idx + ')" title="Delete Game Column">❌</button>';
+        headHtml += '</div>';
+        headHtml += '</th>';
+    });
+    headHtml += '<th style="width:70px;text-align:center;">Action</th>';
+    headHtml += '</tr>';
+    thead.innerHTML = headHtml;
+
+    // Render Table Body
+    if (!Array.isArray(data) || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="' + (headers.length + 3) + '" style="text-align:center;padding:25px;color:#888;">No Year Chart records found. Use "Add Date Row" or "Bulk Upload CSV" below to add 2025-2026 data.</td></tr>';
+        return;
+    }
+
+    var bodyHtml = '';
+    data.forEach(function(row) {
+        var rowId = row.id;
+        bodyHtml += '<tr data-row-id="' + rowId + '">';
+        bodyHtml += '<td style="text-align:center;"><input type="checkbox" class="yc-row-checkbox" value="' + rowId + '"></td>';
+        
+        // Date Cell
+        bodyHtml += '<td><span class="cell-editable" onclick="editYearChartDate(\'' + rowId + '\', \'' + escapeQuotes(row.date || '') + '\')">' + (row.date || '-') + '</span></td>';
+
+        // Result Cells
+        var values = Array.isArray(row.values) ? row.values : [];
+        headers.forEach(function(h, colIdx) {
+            var val = (values[colIdx] !== undefined && values[colIdx] !== null && values[colIdx] !== '') ? values[colIdx] : '-';
+            bodyHtml += '<td style="text-align:center;"><span class="cell-editable" onclick="editYearChartValue(\'' + rowId + '\', ' + colIdx + ', \'' + escapeQuotes(val) + '\')">' + val + '</span></td>';
+        });
+
+        // Action Column
+        bodyHtml += '<td style="text-align:center;"><button type="button" class="btn-admin btn-danger btn-sm" onclick="deleteYearChartRow(\'' + rowId + '\')">🗑️</button></td>';
+        bodyHtml += '</tr>';
+    });
+
+    tbody.innerHTML = bodyHtml;
+}
+
+function toggleSelectAllYearChartRows(masterCb) {
+    var checkboxes = document.querySelectorAll('.yc-row-checkbox');
+    checkboxes.forEach(function(cb) {
+        cb.checked = masterCb.checked;
+    });
+}
+
+function editYearChartHeader(colIdx, currentVal) {
+    var newVal = prompt('Enter game/column name:', currentVal);
+    if (newVal === null) return;
+    newVal = newVal.trim();
+    if (!newVal) return;
+
+    var headers = getData('year_chart_headers') || (typeof DEFAULT_YEAR_CHART_HEADERS !== 'undefined' ? DEFAULT_YEAR_CHART_HEADERS : []);
+    headers[colIdx] = newVal;
+
+    return pushToFirebase('year_chart_headers', headers)
+        .then(function() {
+            localStorage.setItem('a7_year_chart_headers', JSON.stringify(headers));
+            renderAdminYearChart();
+            if (typeof renderYearChart === 'function') renderYearChart();
+            showToast('Header updated: ' + newVal);
+        })
+        .catch(function(err) {
+            showToast('Error updating header: ' + err.message, 'error');
+        });
+}
+
+function addYearChartColumn() {
+    var colName = prompt('Enter new Game/Column name:');
+    if (colName === null) return;
+    colName = colName.trim();
+    if (!colName) return;
+
+    var headers = getData('year_chart_headers') || [];
+    var data = getData('year_chart_data') || [];
+
+    headers.push(colName);
+    data.forEach(function(row) {
+        if (!Array.isArray(row.values)) row.values = [];
+        row.values.push('-');
+    });
+
+    return Promise.all([
+        pushToFirebase('year_chart_headers', headers),
+        pushToFirebase('year_chart_data', data)
+    ]).then(function() {
+        localStorage.setItem('a7_year_chart_headers', JSON.stringify(headers));
+        localStorage.setItem('a7_year_chart_data', JSON.stringify(data));
+        renderAdminYearChart();
+        if (typeof renderYearChart === 'function') renderYearChart();
+        showToast('Added new game column: ' + colName);
+    }).catch(function(err) {
+        showToast('Error adding column: ' + err.message, 'error');
+    });
+}
+
+function deleteYearChartColumn(colIdx) {
+    var headers = getData('year_chart_headers') || [];
+    var headerName = headers[colIdx] || ('Column #' + (colIdx + 1));
+    if (!confirm('Are you sure you want to delete column "' + headerName + '"? Data in this column will be removed.')) return;
+
+    headers.splice(colIdx, 1);
+    var data = getData('year_chart_data') || [];
+    data.forEach(function(row) {
+        if (Array.isArray(row.values)) {
+            row.values.splice(colIdx, 1);
+        }
+    });
+
+    return Promise.all([
+        pushToFirebase('year_chart_headers', headers),
+        pushToFirebase('year_chart_data', data)
+    ]).then(function() {
+        localStorage.setItem('a7_year_chart_headers', JSON.stringify(headers));
+        localStorage.setItem('a7_year_chart_data', JSON.stringify(data));
+        renderAdminYearChart();
+        if (typeof renderYearChart === 'function') renderYearChart();
+        showToast('Deleted game column: ' + headerName);
+    }).catch(function(err) {
+        showToast('Error deleting column: ' + err.message, 'error');
+    });
+}
+
+function editYearChartDate(rowId, currentVal) {
+    var newVal = prompt('Edit Date (e.g. 01-01-2025):', currentVal);
+    if (newVal === null) return;
+    newVal = newVal.trim();
+    if (!newVal) return;
+
+    var data = getData('year_chart_data') || [];
+    var targetRow = data.find(function(r) { return r.id === rowId; });
+    if (!targetRow) return;
+
+    targetRow.date = newVal;
+
+    return pushToFirebase('year_chart_data', data)
+        .then(function() {
+            localStorage.setItem('a7_year_chart_data', JSON.stringify(data));
+            renderAdminYearChart();
+            if (typeof renderYearChart === 'function') renderYearChart();
+            showToast('Date updated to: ' + newVal);
+        })
+        .catch(function(err) {
+            showToast('Error updating date: ' + err.message, 'error');
+        });
+}
+
+function editYearChartValue(rowId, colIdx, currentVal) {
+    var newVal = prompt('Edit Result Value:', currentVal);
+    if (newVal === null) return;
+    newVal = newVal.trim();
+    if (!newVal) newVal = '-';
+
+    var data = getData('year_chart_data') || [];
+    var targetRow = data.find(function(r) { return r.id === rowId; });
+    if (!targetRow) return;
+
+    if (!Array.isArray(targetRow.values)) targetRow.values = [];
+    targetRow.values[colIdx] = newVal;
+
+    return pushToFirebase('year_chart_data', data)
+        .then(function() {
+            localStorage.setItem('a7_year_chart_data', JSON.stringify(data));
+            renderAdminYearChart();
+            if (typeof renderYearChart === 'function') renderYearChart();
+            showToast('Result value saved: ' + newVal);
+        })
+        .catch(function(err) {
+            showToast('Error saving value: ' + err.message, 'error');
+        });
+}
+
+function addYearChartRow() {
+    var headers = getData('year_chart_headers') || (typeof DEFAULT_YEAR_CHART_HEADERS !== 'undefined' ? DEFAULT_YEAR_CHART_HEADERS : []);
+    var data = getData('year_chart_data') || [];
+
+    var defaultValues = [];
+    headers.forEach(function() { defaultValues.push('-'); });
+
+    var todayStr = new Date().toISOString().slice(0, 10).split('-').reverse().join('-'); // DD-MM-YYYY
+    var newRow = {
+        id: generateUniqueId('yc_r'),
+        date: todayStr,
+        values: defaultValues
+    };
+
+    data.push(newRow);
+
+    return pushToFirebase('year_chart_data', data)
+        .then(function() {
+            localStorage.setItem('a7_year_chart_data', JSON.stringify(data));
+            renderAdminYearChart();
+            if (typeof renderYearChart === 'function') renderYearChart();
+            showToast('Added new Date Row');
+        })
+        .catch(function(err) {
+            showToast('Error adding row: ' + err.message, 'error');
+        });
+}
+
+function deleteYearChartRow(rowId) {
+    if (!confirm('Are you sure you want to delete this row?')) return;
+
+    var data = getData('year_chart_data') || [];
+    var filtered = data.filter(function(r) { return r.id !== rowId; });
+
+    return pushToFirebase('year_chart_data', filtered)
+        .then(function() {
+            localStorage.setItem('a7_year_chart_data', JSON.stringify(filtered));
+            renderAdminYearChart();
+            if (typeof renderYearChart === 'function') renderYearChart();
+            showToast('Deleted Year Chart row');
+        })
+        .catch(function(err) {
+            showToast('Error deleting row: ' + err.message, 'error');
+        });
+}
+
+function deleteSelectedYearChartRows() {
+    var checkboxes = document.querySelectorAll('.yc-row-checkbox:checked');
+    if (checkboxes.length === 0) {
+        showToast('Please select at least one row to delete.', 'info');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to delete ' + checkboxes.length + ' selected row(s)?')) return;
+
+    var selectedIds = Array.from(checkboxes).map(function(cb) { return cb.value; });
+    var data = getData('year_chart_data') || [];
+    var filtered = data.filter(function(r) { return !selectedIds.includes(r.id); });
+
+    return pushToFirebase('year_chart_data', filtered)
+        .then(function() {
+            localStorage.setItem('a7_year_chart_data', JSON.stringify(filtered));
+            renderAdminYearChart();
+            if (typeof renderYearChart === 'function') renderYearChart();
+            showToast('Deleted ' + selectedIds.length + ' selected row(s)');
+        })
+        .catch(function(err) {
+            showToast('Error deleting rows: ' + err.message, 'error');
+        });
+}
+
+// Bulk CSV Handling
+function handleYearChartFileSelect(evt) {
+    var file = evt.target.files[0];
+    if (!file) return;
+
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var contents = e.target.result;
+        document.getElementById('yearchart-csv-text').value = contents;
+        showToast('Loaded CSV file: ' + file.name, 'info');
+    };
+    reader.readAsText(file);
+}
+
+function parseCSV(text) {
+    var lines = text.split(/\r?\n/).map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+    if (lines.length === 0) return null;
+
+    var rawHeaders = lines[0].split(',').map(function(h) { return h.trim().replace(/^["']|["']$/g, ''); });
+    if (rawHeaders.length === 0) return null;
+
+    var gameHeaders = [];
+    rawHeaders.forEach(function(h, idx) {
+        if (idx !== 0) {
+            gameHeaders.push(h);
+        }
+    });
+
+    var rows = [];
+    for (var i = 1; i < lines.length; i++) {
+        var cells = lines[i].split(',').map(function(c) { return c.trim().replace(/^["']|["']$/g, ''); });
+        if (cells.length === 0) continue;
+
+        var dateVal = cells[0] || ('Row #' + i);
+        var values = [];
+
+        for (var j = 1; j < rawHeaders.length; j++) {
+            var val = cells[j];
+            values.push((val !== undefined && val !== null && val !== '') ? val : '-');
+        }
+
+        rows.push({
+            id: generateUniqueId('yc_r'),
+            date: dateVal,
+            values: values
+        });
+    }
+
+    return {
+        headers: gameHeaders,
+        rows: rows
+    };
+}
+
+function previewYearChartCSV() {
+    var csvText = document.getElementById('yearchart-csv-text').value.trim();
+    if (!csvText) {
+        showToast('Please paste CSV data or select a CSV file first.', 'error');
+        return;
+    }
+
+    var parsed = parseCSV(csvText);
+    if (!parsed || !parsed.rows || parsed.rows.length === 0) {
+        showToast('Failed to parse CSV data. Check the format.', 'error');
+        return;
+    }
+
+    yearChartCSVPreviewData = parsed;
+
+    var box = document.getElementById('yearchart-csv-preview-box');
+    var stats = document.getElementById('yearchart-csv-stats');
+    var tableDiv = document.getElementById('yearchart-csv-preview-table');
+
+    stats.innerHTML = '<strong>Parsed Result:</strong> ' + parsed.rows.length + ' Date Rows, ' + parsed.headers.length + ' Game Columns (' + parsed.headers.join(', ') + ')';
+
+    var html = '<table class="admin-table"><thead><tr><th style="color:#ffd800;">Date</th>';
+    parsed.headers.forEach(function(h) {
+        html += '<th style="text-align:center;">' + h + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    var previewLimit = Math.min(parsed.rows.length, 10);
+    for (var i = 0; i < previewLimit; i++) {
+        var r = parsed.rows[i];
+        html += '<tr><td>' + r.date + '</td>';
+        r.values.forEach(function(v) {
+            html += '<td style="text-align:center;">' + v + '</td>';
+        });
+        html += '</tr>';
+    }
+
+    if (parsed.rows.length > 10) {
+        html += '<tr><td colspan="' + (parsed.headers.length + 1) + '" style="text-align:center;color:#888;font-style:italic;">... plus ' + (parsed.rows.length - 10) + ' more rows ...</td></tr>';
+    }
+
+    html += '</tbody></table>';
+    tableDiv.innerHTML = html;
+    box.style.display = 'block';
+    showToast('CSV preview generated successfully!');
+}
+
+function importYearChartData(mode) {
+    if (!yearChartCSVPreviewData || !yearChartCSVPreviewData.rows || yearChartCSVPreviewData.rows.length === 0) {
+        showToast('Please preview the CSV data before importing.', 'error');
+        return;
+    }
+
+    var actionText = mode === 'replace' ? 'REPLACE the entire Year Chart' : 'MERGE with the existing Year Chart';
+    if (!confirm('Are you sure you want to ' + actionText + ' with ' + yearChartCSVPreviewData.rows.length + ' imported records?')) return;
+
+    var finalHeaders = yearChartCSVPreviewData.headers;
+    var finalData = [];
+
+    if (mode === 'replace') {
+        finalData = yearChartCSVPreviewData.rows;
+    } else {
+        var existingHeaders = getData('year_chart_headers') || [];
+        var existingData = getData('year_chart_data') || [];
+
+        finalHeaders = (existingHeaders.length > 0 && existingHeaders.length === yearChartCSVPreviewData.headers.length) ? existingHeaders : yearChartCSVPreviewData.headers;
+        finalData = existingData.slice();
+
+        yearChartCSVPreviewData.rows.forEach(function(importedRow) {
+            var existingRow = finalData.find(function(r) { return r.date === importedRow.date; });
+            if (existingRow) {
+                existingRow.values = importedRow.values;
+            } else {
+                finalData.push(importedRow);
+            }
+        });
+    }
+
+    return Promise.all([
+        pushToFirebase('year_chart_headers', finalHeaders),
+        pushToFirebase('year_chart_data', finalData)
+    ]).then(function() {
+        localStorage.setItem('a7_year_chart_headers', JSON.stringify(finalHeaders));
+        localStorage.setItem('a7_year_chart_data', JSON.stringify(finalData));
+        renderAdminYearChart();
+        if (typeof renderYearChart === 'function') renderYearChart();
+
+        document.getElementById('yearchart-csv-preview-box').style.display = 'none';
+        document.getElementById('yearchart-csv-text').value = '';
+        yearChartCSVPreviewData = null;
+
+        showToast('Successfully imported ' + finalData.length + ' records (' + mode.toUpperCase() + ' mode)!');
+    }).catch(function(err) {
+        showToast('Import failed: ' + err.message, 'error');
     });
 }

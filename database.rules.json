@@ -55,6 +55,14 @@
         ".read": true,
         ".write": "auth != null && auth.token.admin == true"
       },
+      "year_chart_headers": {
+        ".read": true,
+        ".write": "auth != null && auth.token.admin == true"
+      },
+      "year_chart_data": {
+        ".read": true,
+        ".write": "auth != null && auth.token.admin == true"
+      },
       "marquee": {
         ".read": true,
         ".write": "auth != null && auth.token.admin == true"

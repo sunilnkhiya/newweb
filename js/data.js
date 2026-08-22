@@ -217,6 +217,10 @@ const DEFAULT_PREV_FULLCHART_DATA = [
     { id: "pfc_r3107", date: "31-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] }
 ];
 
+// Year Chart 2025–2026 data structures
+const DEFAULT_YEAR_CHART_HEADERS = DEFAULT_FULLCHART_HEADERS;
+const DEFAULT_YEAR_CHART_DATA = [];
+
 const DEFAULT_DISCLAIMER = "!! DISCLAIMER:- This is a demo website. Viewing This Website Is Your Own Risk, All The Information Shown On Website Is Sponsored And We Warn You That Matka Gambling/Satta May Be Banned Or Illegal In Your Country..., We Are Not Responsible For Any Issues Or Scam..., We Respect All Country Rules/Laws... If You Not Agree With Our Site Disclaimer... Please Quit Our Site Right Now. Thank You.";
 
 // Ensure all items in a list have unique IDs
@@ -249,12 +253,21 @@ function initData(forceReset) {
         localStorage.setItem('a7_fullchart_data', JSON.stringify(ensureUniqueIds(DEFAULT_FULLCHART_DATA, 'fc_r')));
         localStorage.setItem('a7_prev_fullchart_headers', JSON.stringify(DEFAULT_PREV_FULLCHART_HEADERS));
         localStorage.setItem('a7_prev_fullchart_data', JSON.stringify(ensureUniqueIds(DEFAULT_PREV_FULLCHART_DATA, 'pfc_r')));
+        localStorage.setItem('a7_year_chart_headers', JSON.stringify(DEFAULT_YEAR_CHART_HEADERS));
+        localStorage.setItem('a7_year_chart_data', JSON.stringify(ensureUniqueIds(DEFAULT_YEAR_CHART_DATA, 'yc_r')));
         localStorage.setItem('a7_disclaimer', DEFAULT_DISCLAIMER);
         localStorage.setItem('a7_initialized_v12', 'true');
     }
 
+    if (!localStorage.getItem('a7_year_chart_headers')) {
+        localStorage.setItem('a7_year_chart_headers', JSON.stringify(DEFAULT_YEAR_CHART_HEADERS));
+    }
+    if (!localStorage.getItem('a7_year_chart_data')) {
+        localStorage.setItem('a7_year_chart_data', JSON.stringify(DEFAULT_YEAR_CHART_DATA));
+    }
+
     // Ensure IDs exist on loaded data
-    ['games_primary', 'games_secondary', 'chart1_data', 'chart2_data', 'chart3_data', 'fullchart_data', 'prev_fullchart_data'].forEach(key => {
+    ['games_primary', 'games_secondary', 'chart1_data', 'chart2_data', 'chart3_data', 'fullchart_data', 'prev_fullchart_data', 'year_chart_data'].forEach(key => {
         var items = getData(key);
         if (Array.isArray(items)) {
             var updated = ensureUniqueIds(items, key);

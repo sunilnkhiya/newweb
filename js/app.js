@@ -371,12 +371,95 @@ function initHomePage() {
     renderChart('chart3-table', 'chart3_headers', 'chart3_data', '#f0c987');
 }
 
+let currentYearFilter = 'ALL';
+
+function filterYearChart(year, btnEl) {
+    currentYearFilter = year || 'ALL';
+    const buttons = document.querySelectorAll('.btn-year-filter');
+    buttons.forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = '#1e293b';
+        btn.style.color = '#ffd800';
+        btn.style.border = '1px solid #ffd800';
+    });
+    if (btnEl) {
+        btnEl.classList.add('active');
+        btnEl.style.background = '#ffd800';
+        btnEl.style.color = '#000';
+        btnEl.style.border = 'none';
+    }
+    renderYearChart();
+}
+
+function renderYearChart() {
+    const table = document.getElementById('yearchart-table');
+    const emptyMsg = document.getElementById('yearchart-empty-msg');
+    if (!table) return;
+
+    const headers = getData('year_chart_headers') || (typeof DEFAULT_YEAR_CHART_HEADERS !== 'undefined' ? DEFAULT_YEAR_CHART_HEADERS : []);
+    const data = getData('year_chart_data') || [];
+
+    if (!Array.isArray(headers) || headers.length === 0 || !Array.isArray(data) || data.length === 0) {
+        table.style.display = 'none';
+        if (emptyMsg) {
+            emptyMsg.textContent = 'No Year Chart data available yet.';
+            emptyMsg.style.display = 'block';
+        }
+        return;
+    }
+
+    // Apply Year Filtering (2025, 2026, or ALL)
+    let filteredData = data;
+    if (currentYearFilter === '2025') {
+        filteredData = data.filter(r => r && r.date && (r.date.includes('2025') || r.date.endsWith('-25')));
+    } else if (currentYearFilter === '2026') {
+        filteredData = data.filter(r => r && r.date && (r.date.includes('2026') || r.date.endsWith('-26')));
+    }
+
+    if (filteredData.length === 0) {
+        table.style.display = 'none';
+        if (emptyMsg) {
+            emptyMsg.textContent = 'No Year Chart data found for year ' + currentYearFilter + '.';
+            emptyMsg.style.display = 'block';
+        }
+        return;
+    }
+
+    table.style.display = 'table';
+    if (emptyMsg) emptyMsg.style.display = 'none';
+
+    let html = '<tbody>';
+    // Header row
+    html += '<tr>';
+    html += '<td class="table_chart_section_01 forfirtcolor"><strong class="fon">दिनांक</strong></td>';
+    headers.forEach(h => {
+        html += `<td class="table_chart_section forfirtcolor text-center">${h}</td>`;
+    });
+    html += '</tr>';
+
+    // Data rows
+    filteredData.forEach(row => {
+        html += '<tr>';
+        html += `<td class="forfirtcolor"><span class="fon">${row.date || ''}</span></td>`;
+        const values = Array.isArray(row.values) ? row.values : [];
+        headers.forEach((h, idx) => {
+            const val = values[idx] !== undefined && values[idx] !== null && values[idx] !== '' ? values[idx] : '-';
+            html += `<td><span class="table_chart_section_02">${val}</span></td>`;
+        });
+        html += '</tr>';
+    });
+
+    html += '</tbody>';
+    table.innerHTML = html;
+}
+
 function initChartPage() {
     updateClock();
     renderMarquee();
     renderLiveResults();
     renderFullChart('fullchart-table', 'fullchart_headers', 'fullchart_data');
     renderFullChart('prev-fullchart-table', 'prev_fullchart_headers', 'prev_fullchart_data');
+    renderYearChart();
 }
 
 function initContactPage() {

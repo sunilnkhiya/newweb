@@ -108,6 +108,38 @@
     </div>
 </section>
 
+<!-- === YEAR CHART 2025-2026 HEADER & FILTER === -->
+<section class="octoberresultchart" id="year-chart-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12 text-center">
+                <h1>YEAR CHART 2025-2026</h1>
+                <div class="year-filter-bar" style="margin-top:15px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
+                    <button type="button" class="btn-year-filter active" onclick="filterYearChart('ALL', this)" style="background:#ffd800;color:#000;border:none;padding:8px 18px;border-radius:6px;font-weight:800;font-size:14px;cursor:pointer;transition:all 0.2s;">ALL (2025-2026)</button>
+                    <button type="button" class="btn-year-filter" onclick="filterYearChart('2025', this)" style="background:#1e293b;color:#ffd800;border:1px solid #ffd800;padding:8px 18px;border-radius:6px;font-weight:800;font-size:14px;cursor:pointer;transition:all 0.2s;">2025</button>
+                    <button type="button" class="btn-year-filter" onclick="filterYearChart('2026', this)" style="background:#1e293b;color:#ffd800;border:1px solid #ffd800;padding:8px 18px;border-radius:6px;font-weight:800;font-size:14px;cursor:pointer;transition:all 0.2s;">2026</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- === YEAR CHART TABLE === -->
+<section class="newtable">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12 nopadding">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="yearchart-table"></table>
+                    <div id="yearchart-empty-msg" style="display:none;text-align:center;padding:30px;color:#ffd800;font-weight:700;font-size:16px;background:#1b2838;border:1px solid #334155;margin:15px 0;border-radius:8px;">
+                        No Year Chart data available yet.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- === FOOTER === -->
 <section class="somelinks2">
     <div class="container">

@@ -55,6 +55,7 @@
             <button class="admin-tab" data-tab="featured" onclick="switchTab('featured')">⭐ Featured Result</button>
             <button class="admin-tab" data-tab="charts" onclick="switchTab('charts')">📊 Home Charts</button>
             <button class="admin-tab" data-tab="fullcharts" onclick="switchTab('fullcharts')">📋 Full Charts</button>
+            <button class="admin-tab" data-tab="yearchart" onclick="switchTab('yearchart')">📅 Year Chart 2025-26</button>
             <button class="admin-tab" data-tab="content" onclick="switchTab('content')">📝 Content</button>
             <button class="admin-tab" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
         </div>
@@ -124,6 +125,68 @@
                 <h3>July 2026 Full Chart (Previous Month) <span class="section-badge">Chart Page</span></h3>
                 <p style="color:#888;font-size:13px;margin-bottom:10px;">Previous month's chart data.</p>
                 <div class="table-scroll" id="admin-prev-fullchart"></div>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- TAB: YEAR CHART 2025-26 -->
+        <!-- ============================================ -->
+        <div class="tab-content" id="tab-yearchart">
+            <div class="admin-section">
+                <h3>Year Chart Manager 2025-2026 <span class="section-badge">Realtime Firebase Persistence</span></h3>
+                <p style="color:#888;font-size:13px;margin-bottom:15px;">Manage historical records for 2025 and 2026. Click any cell to edit inline. All changes save directly to Firebase Realtime Database (<code>a7satta/year_chart_data</code>).</p>
+
+                <!-- Year Chart Toolbar -->
+                <div style="margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                    <button type="button" class="btn-admin btn-success" onclick="addYearChartRow()">➕ Add Date Row</button>
+                    <button type="button" class="btn-admin btn-info" onclick="addYearChartColumn()">➕ Add Game Column</button>
+                    <button type="button" class="btn-admin btn-danger" onclick="deleteSelectedYearChartRows()">🗑️ Delete Selected Rows</button>
+                </div>
+
+                <!-- Year Chart Interactive Table -->
+                <div class="table-scroll" id="admin-yearchart-container">
+                    <table class="admin-table">
+                        <thead id="admin-yearchart-head"></thead>
+                        <tbody id="admin-yearchart-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Bulk Upload Year Chart Data Section -->
+            <div class="admin-section" style="margin-top:25px;">
+                <h3>📥 Bulk Upload Year Chart Data (CSV Import)</h3>
+                <p style="color:#888;font-size:13px;margin-bottom:15px;">Upload large historical datasets for 2025 & 2026 via CSV. Paste raw CSV content or select a <code>.csv</code> file.</p>
+
+                <div style="background:#0f172a;border:1px solid #334155;padding:15px;border-radius:8px;margin-bottom:15px;">
+                    <strong style="color:#ffd800;display:block;margin-bottom:5px;">Expected CSV Format:</strong>
+                    <code style="color:#94a3b8;font-size:12px;display:block;">
+                        Date, मुंबई डे, सदर बाजार, ग्वालियर, दिल्ली बाजार, भोपाल सिटी<br>
+                        01-01-2025,12,45,78,90,34<br>
+                        02-01-2025,34,67,89,10,-
+                    </code>
+                </div>
+
+                <div style="margin-bottom:15px;">
+                    <label style="color:#fff;font-weight:700;margin-bottom:5px;display:block;">Select CSV File:</label>
+                    <input type="file" id="yearchart-csv-file" accept=".csv,.txt" onchange="handleYearChartFileSelect(event)" style="color:#fff;margin-bottom:10px;">
+
+                    <label style="color:#fff;font-weight:700;margin-bottom:5px;display:block;">Or Paste CSV Data:</label>
+                    <textarea class="admin-input" id="yearchart-csv-text" rows="6" placeholder="Paste CSV text here..." style="font-family:monospace;font-size:13px;margin-bottom:15px;"></textarea>
+
+                    <button type="button" class="btn-admin btn-info" onclick="previewYearChartCSV()">🔍 Preview CSV Data</button>
+                </div>
+
+                <!-- CSV Preview Container -->
+                <div id="yearchart-csv-preview-box" style="display:none;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:15px;margin-top:15px;">
+                    <h4 style="color:#ffd800;margin-top:0;">CSV Import Preview</h4>
+                    <div id="yearchart-csv-stats" style="color:#cbd5e1;font-size:13px;margin-bottom:10px;"></div>
+                    <div class="table-scroll" id="yearchart-csv-preview-table" style="max-height:300px;margin-bottom:15px;"></div>
+
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                        <button type="button" class="btn-admin btn-success" onclick="importYearChartData('merge')">🔀 Merge with Existing Year Chart</button>
+                        <button type="button" class="btn-admin btn-warning" onclick="importYearChartData('replace')">⚠️ Replace Existing Year Chart</button>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -204,6 +204,12 @@ function listenToFirebaseUpdates() {
             if (typeof renderFullChart === 'function' && document.getElementById('fullchart-table')) {
                 renderFullChart('fullchart-table', 'fullchart_headers', 'fullchart_data');
             }
+            if (typeof renderYearChart === 'function' && document.getElementById('yearchart-table')) {
+                renderYearChart();
+            }
+            if (typeof renderAdminYearChart === 'function' && document.getElementById('admin-yearchart-body')) {
+                renderAdminYearChart();
+            }
         }
     }, function(error) {
         console.error('[RESULT FETCH] Realtime subscription error:', error);
