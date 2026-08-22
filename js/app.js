@@ -46,31 +46,32 @@ function renderLiveResults() {
     const primary = getData('games_primary');
     const secondary = getData('games_secondary');
 
-    // Show games that have results or are waiting
     let html = '';
     const allGames = [...(primary || []), ...(secondary || [])];
-    
-    allGames.forEach(game => {
-        if (game.today && game.today !== '' && game.today !== '-') {
-            html += `
-                <div class="sattaname"><p>${game.name}</p></div>
-                <div class="sattaresult">
-                    <font><span style="font-size:36px;font-weight:900;color:#ff0000;">${game.today}</span></font>
-                </div>
-            `;
-        }
-    });
 
-    // Show next waiting games
-    const waitingGames = allGames.filter(g => !g.today || g.today === '' || g.today === '-');
-    waitingGames.slice(0, 2).forEach(game => {
+    // Show ONLY the single most recently uploaded game result
+    const uploadedGames = allGames.filter(g => g.today && g.today !== '' && g.today !== '-');
+    if (uploadedGames.length > 0) {
+        const lastUploaded = uploadedGames[uploadedGames.length - 1];
         html += `
-            <div class="sattaname"><p>${game.name}</p></div>
+            <div class="sattaname"><p>${lastUploaded.name}</p></div>
+            <div class="sattaresult">
+                <font><span style="font-size:36px;font-weight:900;color:#ff0000;">${lastUploaded.today}</span></font>
+            </div>
+        `;
+    }
+
+    // Show ONLY the single next upcoming game waiting for result
+    const waitingGames = allGames.filter(g => !g.today || g.today === '' || g.today === '-');
+    if (waitingGames.length > 0) {
+        const nextWaiting = waitingGames[0];
+        html += `
+            <div class="sattaname"><p>${nextWaiting.name}</p></div>
             <div class="sattaresult">
                 <span class="star-anim">WAIT</span>
             </div>
         `;
-    });
+    }
 
     container.innerHTML = html;
 }
