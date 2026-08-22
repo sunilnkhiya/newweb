@@ -11,128 +11,279 @@ if (!admin.apps.length) {
 
 setGlobalOptions({ maxInstances: 10 });
 
-/**
- * Core Archive Logic (Reusable for both Scheduled Trigger & HTTP Manual Trigger)
- * @param {string|null} customDateStr - Optional date override in "DD-MM-YYYY" or "YYYY-MM-DD" format
- * @returns {Promise<Object>} Execution result metrics
- */
-async function runArchiveDailyResults(customDateStr = null) {
-    const db = admin.database();
-    const rootRef = db.ref('a7satta');
+// Secret key for manual HTTP endpoint authorization (overridable via environment variable)
+const ARCHIVE_ADMIN_SECRET = process.env.ARCHIVE_ADMIN_SECRET || process.env.ADMIN_SECRET || "A7_SATTA_SECURE_ARCHIVE_2026";
 
-    // 1. Calculate Target Archive Date in Asia/Kolkata timezone
-    let targetDate = null;
+/**
+ * 1. Accurate Previous Calendar Date Calculation in Asia/Kolkata timezone
+ * @param {string|null} customDateStr - Optional date override in "DD-MM-YYYY" or "YYYY-MM-DD" format
+ * @returns {Object} { dateDDMM, dateDDMMYYYY, fullISO }
+ */
+function getKolkataTargetDate(customDateStr = null) {
     if (customDateStr && typeof customDateStr === 'string') {
         const trimmed = customDateStr.trim();
         if (trimmed.includes('-')) {
             const parts = trimmed.split('-');
+            let d, m, y;
             if (parts[0].length === 4) {
                 // YYYY-MM-DD
-                targetDate = {
-                    day: parts[2].padStart(2, '0'),
-                    month: parts[1].padStart(2, '0'),
-                    year: parts[0]
-                };
-            } else if (parts.length >= 2) {
-                // DD-MM-YYYY or DD-MM
-                targetDate = {
-                    day: parts[0].padStart(2, '0'),
-                    month: parts[1].padStart(2, '0'),
-                    year: parts[2] || String(new Date().getFullYear())
+                [y, m, d] = parts;
+            } else if (parts.length >= 3) {
+                // DD-MM-YYYY
+                [d, m, y] = parts;
+            } else if (parts.length === 2) {
+                // DD-MM
+                [d, m] = parts;
+                y = String(new Date().getFullYear());
+            }
+
+            if (d && m && y) {
+                const pd = String(d).padStart(2, '0');
+                const pm = String(m).padStart(2, '0');
+                const py = String(y);
+                return {
+                    dateDDMM: `${pd}-${pm}`,
+                    dateDDMMYYYY: `${pd}-${pm}-${py}`,
+                    fullISO: `${py}-${pm}-${pd}`
                 };
             }
         }
     }
 
-    if (!targetDate) {
-        // Scheduled trigger at 12:00 AM IST: archive previous day (the day that just ended)
-        const now = new Date();
-        const kolkataOffsetMs = (5 * 60 + 30) * 60 * 1000;
-        const localKolkataTimeMs = now.getTime() + kolkataOffsetMs;
-        const prevDayDate = new Date(localKolkataTimeMs - (12 * 60 * 60 * 1000));
+    // Default: Calculate previous calendar date in Asia/Kolkata timezone
+    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
+    const currentDateStr = formatter.format(new Date());
 
-        const day = String(prevDayDate.getUTCDate()).padStart(2, '0');
-        const month = String(prevDayDate.getUTCMonth() + 1).padStart(2, '0');
-        const year = String(prevDayDate.getUTCFullYear());
-        targetDate = { day, month, year };
+    const [curYear, curMonth, curDay] = currentDateStr.split('-').map(Number);
+    // Subtract 1 calendar day safely using UTC Date math
+    const prevDate = new Date(Date.UTC(curYear, curMonth - 1, curDay - 1));
+
+    const py = String(prevDate.getUTCFullYear());
+    const pm = String(prevDate.getUTCMonth() + 1).padStart(2, '0');
+    const pd = String(prevDate.getUTCDate()).padStart(2, '0');
+
+    return {
+        dateDDMM: `${pd}-${pm}`,
+        dateDDMMYYYY: `${pd}-${pm}-${py}`,
+        fullISO: `${py}-${pm}-${pd}`
+    };
+}
+
+/**
+ * 2. Unicode Normalization & Stable Game Key Mapping
+ */
+function normalizeGameName(name) {
+    if (!name) return '';
+    return String(name)
+        .normalize('NFC')
+        .trim()
+        .toLowerCase()
+        .replace(/[\s\-_]/g, '');
+}
+
+const GAME_ALIASES = {
+    'mumbai-day': 'chennai-day',
+    'mumbaiday': 'chennai-day',
+    'chennaiday': 'chennai-day',
+    'चेन्नईडे': 'chennai-day',
+    'मुंबईडे': 'chennai-day',
+    'sadar-bazar': 'sadar-bazar',
+    'sadarbazar': 'sadar-bazar',
+    'सदरबाजार': 'sadar-bazar',
+    'gwalior': 'gwalior',
+    'ग्वालियर': 'gwalior',
+    'delhi-bazar': 'delhi-bazar',
+    'delhibazar': 'delhi-bazar',
+    'दिल्लीबाजार': 'delhi-bazar',
+    'bhopal-city': 'udaipur-town',
+    'bhopalcity': 'udaipur-town',
+    'udaipurtown': 'udaipur-town',
+    'उदयपुरटाउन': 'udaipur-town',
+    'भोपालसिटी': 'udaipur-town',
+    'shree-ganesh': 'shree-ganesh',
+    'shreeganesh': 'shree-ganesh',
+    'श्रीगणेश': 'shree-ganesh',
+    'jaipur-city': 'bombay-city',
+    'jaipurcity': 'bombay-city',
+    'bombaycity': 'bombay-city',
+    'बॉम्बेसिटी': 'bombay-city',
+    'जयपुरसिटी': 'bombay-city',
+    'faridabad': 'faridabad',
+    'फरीदाबाद': 'faridabad',
+    'surat': 'dehradun-bazar',
+    'suratcity': 'dehradun-bazar',
+    'dehradunbazar': 'dehradun-bazar',
+    'देहरादूनबाजार': 'dehradun-bazar',
+    'सूरत': 'dehradun-bazar',
+    'alwar': 'alwar',
+    'अलवर': 'alwar',
+    'gaziyabad': 'gaziyabad',
+    'गाज़ियाबाद': 'gaziyabad',
+    'गाज़ियाबाद': 'gaziyabad',
+    'pune-night': 'ayodhya-nagari',
+    'punenight': 'ayodhya-nagari',
+    'ayodhyanagari': 'ayodhya-nagari',
+    'अयोध्यानगरी': 'ayodhya-nagari',
+    'पुणेनाईट': 'ayodhya-nagari',
+    'gali': 'gali',
+    'गली': 'gali',
+    'disawar': 'disawar',
+    'दिसावर': 'disawar'
+};
+
+function getCanonicalGameKey(gameObj) {
+    if (!gameObj) return '';
+    if (gameObj.id) {
+        const normId = normalizeGameName(gameObj.id);
+        if (GAME_ALIASES[normId]) return GAME_ALIASES[normId];
     }
+    if (gameObj.slug) {
+        const normSlug = normalizeGameName(gameObj.slug);
+        if (GAME_ALIASES[normSlug]) return GAME_ALIASES[normSlug];
+    }
+    if (gameObj.name) {
+        const normName = normalizeGameName(gameObj.name);
+        if (GAME_ALIASES[normName]) return GAME_ALIASES[normName];
+        return normName;
+    }
+    return '';
+}
 
-    const dateDDMM = `${targetDate.day}-${targetDate.month}`;              // e.g. "22-08"
-    const dateDDMMYYYY = `${targetDate.day}-${targetDate.month}-${targetDate.year}`;   // e.g. "22-08-2026"
+/**
+ * Core Archive Logic (Idempotent & Non-Destructive)
+ * @param {string|null} customDateStr - Optional custom date
+ * @param {boolean} force - Force re-archive even if marker exists
+ * @returns {Promise<Object>} Execution result metrics
+ */
+async function runArchiveDailyResults(customDateStr = null, force = false) {
+    const db = admin.database();
+    const rootRef = db.ref('a7satta');
 
-    logger.info(`[ARCHIVE START] Target Archive Date: ${dateDDMMYYYY} (Monthly key: ${dateDDMM})`);
+    const target = getKolkataTargetDate(customDateStr);
+    const { dateDDMM, dateDDMMYYYY, fullISO } = target;
 
-    // 2. Fetch current database state from a7satta
+    logger.info(`[ARCHIVE START] Target Archive Date: ${dateDDMMYYYY} (ISO: ${fullISO}, Monthly key: ${dateDDMM})`);
+
+    // Fetch current database state
     const snapshot = await rootRef.once('value');
     const data = snapshot.val() || {};
+
+    // 3. Idempotency Check via Archive Marker (a7satta/archive_status/YYYY-MM-DD)
+    const archiveStatus = data.archive_status || {};
+    const existingMarker = archiveStatus[fullISO];
+
+    if (existingMarker && existingMarker.status === 'completed' && !force) {
+        logger.info(`[ARCHIVE SKIPPED] Date ${dateDDMMYYYY} (${fullISO}) was already successfully archived at ${existingMarker.completedAt}. Skipping rollover.`);
+        return {
+            success: true,
+            skipped: true,
+            reason: `Date ${dateDDMMYYYY} is already archived.`,
+            archiveDate: dateDDMMYYYY
+        };
+    }
 
     const primaryGames = Array.isArray(data.games_primary) ? data.games_primary : [];
     const secondaryGames = Array.isArray(data.games_secondary) ? data.games_secondary : [];
     const allGames = [...primaryGames, ...secondaryGames];
 
     if (allGames.length === 0) {
-        logger.warn('[ARCHIVE CANCELLED] No games found in a7satta/games_primary.');
+        logger.warn('[ARCHIVE CANCELLED] No games found in database.');
         return { success: false, message: 'No games found in database.' };
     }
 
-    // Helper to sanitize game values
     const sanitizeResult = (val) => {
         if (!val || typeof val !== 'string') return '-';
-        const trimmedVal = val.trim();
-        if (trimmedVal === '' || trimmedVal === '--' || trimmedVal === '-' || trimmedVal.toUpperCase() === 'WAIT') {
+        const trimmed = val.trim();
+        if (trimmed === '' || trimmed === '--' || trimmed === '-' || trimmed.toUpperCase() === 'WAIT') {
             return '-';
         }
-        return trimmedVal;
+        return trimmed;
     };
 
-    // Build game results lookup map
+    // 4. Stable Game Results Mapping using Canonical Keys
     const gameResultMap = new Map();
+    const missingGames = [];
+
     allGames.forEach(g => {
-        gameResultMap.set(g.name, sanitizeResult(g.today));
+        const canonicalKey = getCanonicalGameKey(g);
+        const resVal = sanitizeResult(g.today);
+        gameResultMap.set(canonicalKey, resVal);
+
+        // Also map by exact name and slug for fallback matching
+        if (g.name) gameResultMap.set(normalizeGameName(g.name), resVal);
+        if (g.slug) gameResultMap.set(normalizeGameName(g.slug), resVal);
+
+        if (resVal === '-') {
+            missingGames.push(g.name || g.slug || g.id);
+        }
     });
 
-    logger.info(`[ARCHIVE GAMES] Extracted ${allGames.length} games. Active values:`, Object.fromEntries(gameResultMap));
+    logger.info(`[ARCHIVE GAMES] Extracted ${allGames.length} games. Missing/Pending results for:`, missingGames);
 
-    // Default column headers fallback
+    // Default column headers fallbacks
     const chart1Headers = Array.isArray(data.chart1_headers) ? data.chart1_headers : ["चेन्नई डे", "सदर बाजार", "ग्वालियर", "दिल्ली बाजार", "उदयपुर टाउन"];
     const chart2Headers = Array.isArray(data.chart2_headers) ? data.chart2_headers : ["श्री गणेश", "बॉम्बे सिटी", "फरीदाबाद", "देहरादून बाजार", "अलवर"];
     const chart3Headers = Array.isArray(data.chart3_headers) ? data.chart3_headers : ["गाज़ियाबाद", "अयोध्या नगरी", "गली", "दिसावर"];
     const fullChartHeaders = Array.isArray(data.fullchart_headers) ? data.fullchart_headers : [...chart1Headers, ...chart2Headers, ...chart3Headers];
     const yearChartHeaders = Array.isArray(data.year_chart_headers) ? data.year_chart_headers : fullChartHeaders;
 
-    // Helper to update or insert row into chart data array (Idempotent)
+    // Helper to get result for a header column
+    const getResultForHeader = (headerName) => {
+        const normHeader = normalizeGameName(headerName);
+        const canonicalHeader = GAME_ALIASES[normHeader] || normHeader;
+
+        if (gameResultMap.has(canonicalHeader)) return gameResultMap.get(canonicalHeader);
+        if (gameResultMap.has(normHeader)) return gameResultMap.get(normHeader);
+        return '-';
+    };
+
+    // 5. Non-Destructive Update Row Logic (Preserves existing valid values)
     const updateOrInsertRow = (chartArray, dateKey, headersList, prefix) => {
         const rows = Array.isArray(chartArray) ? [...chartArray] : [];
-        const values = headersList.map(h => gameResultMap.get(h) || '-');
-
         const existingIdx = rows.findIndex(r => r && r.date === dateKey);
+
         if (existingIdx !== -1) {
+            const existingRow = rows[existingIdx];
+            const existingValues = Array.isArray(existingRow.values) ? existingRow.values : [];
+            const mergedValues = headersList.map((header, idx) => {
+                const newVal = getResultForHeader(header);
+                const oldVal = existingValues[idx];
+
+                // Rule: NEVER overwrite an existing valid result (e.g. "45") with "-" or ""
+                if (newVal === '-' || newVal === '') {
+                    if (oldVal && oldVal !== '-' && oldVal !== '' && oldVal !== 'WAIT') {
+                        return oldVal; // PRESERVE existing valid result!
+                    }
+                }
+                return newVal;
+            });
+
             rows[existingIdx] = {
-                ...rows[existingIdx],
-                values: values
+                ...existingRow,
+                values: mergedValues
             };
-            logger.info(`[CHART UPDATE] Updated existing row for date "${dateKey}" in ${prefix}`);
+            logger.info(`[CHART UPDATE] Updated row for date "${dateKey}" in ${prefix} (Non-destructive merge)`);
         } else {
             const cleanKey = dateKey.replace(/-/g, '');
-            const newRow = {
+            const newValues = headersList.map(header => getResultForHeader(header));
+            rows.push({
                 id: `${prefix}_r${cleanKey}`,
                 date: dateKey,
-                values: values
-            };
-            rows.push(newRow);
+                values: newValues
+            });
             logger.info(`[CHART INSERT] Created new row for date "${dateKey}" in ${prefix}`);
         }
         return rows;
     };
 
-    // 3. Process each destination chart
+    // Process all destination charts
     const updatedChart1Data = updateOrInsertRow(data.chart1_data, dateDDMM, chart1Headers, 'c1');
     const updatedChart2Data = updateOrInsertRow(data.chart2_data, dateDDMM, chart2Headers, 'c2');
     const updatedChart3Data = updateOrInsertRow(data.chart3_data, dateDDMM, chart3Headers, 'c3');
     const updatedFullChartData = updateOrInsertRow(data.fullchart_data, dateDDMM, fullChartHeaders, 'fc');
     const updatedYearChartData = updateOrInsertRow(data.year_chart_data, dateDDMMYYYY, yearChartHeaders, 'yc');
 
-    // 4. Game state rollover: Move today -> yesterday and clear today for next day
+    // 6. Game state rollover: Move today -> yesterday and clear today for next day ONLY on confirmed archive
     const updatedPrimaryGames = primaryGames.map(g => {
         const todayVal = sanitizeResult(g.today);
         const newYesterday = (todayVal !== '-') ? todayVal : (g.yesterday || '--');
@@ -153,7 +304,7 @@ async function runArchiveDailyResults(customDateStr = null) {
         };
     });
 
-    // 5. Atomic write to Firebase Realtime Database
+    // 7. Atomic Multi-Location Write to Firebase Realtime Database
     const updates = {};
     updates['games_primary'] = updatedPrimaryGames;
     if (secondaryGames.length > 0) updates['games_secondary'] = updatedSecondaryGames;
@@ -163,29 +314,42 @@ async function runArchiveDailyResults(customDateStr = null) {
     updates['fullchart_data'] = updatedFullChartData;
     updates['year_chart_data'] = updatedYearChartData;
 
+    // Set archive status marker
+    updates[`archive_status/${fullISO}`] = {
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        dateDDMMYYYY: dateDDMMYYYY,
+        gamesArchived: allGames.length - missingGames.length,
+        missingGamesCount: missingGames.length
+    };
+
     await rootRef.update(updates);
 
-    logger.info(`[ARCHIVE COMPLETE] Successfully archived results for date ${dateDDMMYYYY} into Realtime Database.`);
+    logger.info(`[ARCHIVE SUCCESS] Successfully archived results for date ${dateDDMMYYYY} (${fullISO}) into Firebase.`);
 
     return {
         success: true,
         archiveDate: dateDDMMYYYY,
+        isoDate: fullISO,
         monthlyDateKey: dateDDMM,
-        gamesCount: allGames.length,
+        totalGames: allGames.length,
+        archivedGames: allGames.length - missingGames.length,
+        missingGames: missingGames,
         chartsUpdated: ['chart1_data', 'chart2_data', 'chart3_data', 'fullchart_data', 'year_chart_data']
     };
 }
 
 /**
  * 1. Scheduled Cloud Function v2
- * Triggers every day at 12:00 AM (00:00) Asia/Kolkata timezone
+ * Schedule: 02:00 AM IST (0 2 * * *) daily
+ * Reason: Captures 100% of all daily game results including the 01:30 AM दिसावर result.
  */
 exports.dailyArchiveResults = onSchedule({
-    schedule: "0 0 * * *",
+    schedule: "0 2 * * *",
     timeZone: "Asia/Kolkata",
     retryCount: 3
 }, async (event) => {
-    logger.info("[SCHEDULED TRIGGER] Daily 12:00 AM Archive Started");
+    logger.info("[SCHEDULED TRIGGER] Daily 02:00 AM IST Archive Started");
     try {
         const res = await runArchiveDailyResults();
         logger.info("[SCHEDULED TRIGGER SUCCESS]", res);
@@ -196,17 +360,51 @@ exports.dailyArchiveResults = onSchedule({
 });
 
 /**
- * 2. HTTP Manual Test Trigger
- * Usage: GET /manualArchiveDailyResults or GET /manualArchiveDailyResults?date=22-08-2026
+ * 2. SECURE HTTP Manual Test Trigger
+ * Requires Authorization:
+ * - Header: x-admin-secret matching ARCHIVE_ADMIN_SECRET
+ * OR
+ * - Authorization: Bearer <ID_TOKEN> verified via Firebase Admin Auth (admin claim required)
  */
 exports.manualArchiveDailyResults = onRequest(async (req, res) => {
     try {
-        const customDate = req.query.date || null;
-        logger.info(`[MANUAL TRIGGER] Triggered with custom date: ${customDate || 'Default Previous Day'}`);
+        let isAuthorized = false;
 
-        const result = await runArchiveDailyResults(customDate);
+        // Check 1: Admin Secret Header or query parameter
+        const reqSecret = req.headers['x-admin-secret'] || req.query.secret;
+        if (reqSecret && reqSecret === ARCHIVE_ADMIN_SECRET) {
+            isAuthorized = true;
+        }
+
+        // Check 2: Firebase Auth Admin Token
+        if (!isAuthorized && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+            const token = req.headers.authorization.split('Bearer ')[1];
+            try {
+                const decodedToken = await admin.auth().verifyIdToken(token);
+                if (decodedToken && decodedToken.admin === true) {
+                    isAuthorized = true;
+                }
+            } catch (authErr) {
+                logger.warn('[HTTP AUTH WARNING] Invalid Bearer token:', authErr.message);
+            }
+        }
+
+        if (!isAuthorized) {
+            logger.warn('[HTTP AUTH REJECTED] Unauthorized manual archive attempt from IP:', req.ip);
+            return res.status(401).json({
+                error: "Unauthorized",
+                message: "Valid x-admin-secret header or Admin Firebase Auth Bearer token is required."
+            });
+        }
+
+        const customDate = req.query.date || null;
+        const force = req.query.force === 'true';
+
+        logger.info(`[MANUAL TRIGGER AUTHORIZED] Date: ${customDate || 'Kolkata Previous Day'}, Force: ${force}`);
+
+        const result = await runArchiveDailyResults(customDate, force);
         res.status(200).json({
-            message: "Manual archive completed successfully",
+            message: "Manual archive executed successfully",
             result: result
         });
     } catch (err) {
