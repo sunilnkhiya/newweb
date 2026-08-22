@@ -225,7 +225,6 @@ async function runArchiveDailyResults(customDateStr = null, force = false) {
     const chart2Headers = Array.isArray(data.chart2_headers) ? data.chart2_headers : ["श्री गणेश", "बॉम्बे सिटी", "फरीदाबाद", "देहरादून बाजार", "अलवर"];
     const chart3Headers = Array.isArray(data.chart3_headers) ? data.chart3_headers : ["गाज़ियाबाद", "अयोध्या नगरी", "गली", "दिसावर"];
     const fullChartHeaders = Array.isArray(data.fullchart_headers) ? data.fullchart_headers : [...chart1Headers, ...chart2Headers, ...chart3Headers];
-    const yearChartHeaders = Array.isArray(data.year_chart_headers) ? data.year_chart_headers : fullChartHeaders;
 
     // Helper to get result for a header column
     const getResultForHeader = (headerName) => {
@@ -276,12 +275,11 @@ async function runArchiveDailyResults(customDateStr = null, force = false) {
         return rows;
     };
 
-    // Process all destination charts
+    // Process all monthly destination charts (year_chart_data is EXCLUDED from automatic archive)
     const updatedChart1Data = updateOrInsertRow(data.chart1_data, dateDDMM, chart1Headers, 'c1');
     const updatedChart2Data = updateOrInsertRow(data.chart2_data, dateDDMM, chart2Headers, 'c2');
     const updatedChart3Data = updateOrInsertRow(data.chart3_data, dateDDMM, chart3Headers, 'c3');
     const updatedFullChartData = updateOrInsertRow(data.fullchart_data, dateDDMM, fullChartHeaders, 'fc');
-    const updatedYearChartData = updateOrInsertRow(data.year_chart_data, dateDDMMYYYY, yearChartHeaders, 'yc');
 
     // 6. Game state rollover: Move today -> yesterday and clear today for next day ONLY on confirmed archive
     const updatedPrimaryGames = primaryGames.map(g => {
@@ -312,7 +310,6 @@ async function runArchiveDailyResults(customDateStr = null, force = false) {
     updates['chart2_data'] = updatedChart2Data;
     updates['chart3_data'] = updatedChart3Data;
     updates['fullchart_data'] = updatedFullChartData;
-    updates['year_chart_data'] = updatedYearChartData;
 
     // Set archive status marker
     updates[`archive_status/${fullISO}`] = {
@@ -335,7 +332,7 @@ async function runArchiveDailyResults(customDateStr = null, force = false) {
         totalGames: allGames.length,
         archivedGames: allGames.length - missingGames.length,
         missingGames: missingGames,
-        chartsUpdated: ['chart1_data', 'chart2_data', 'chart3_data', 'fullchart_data', 'year_chart_data']
+        chartsUpdated: ['chart1_data', 'chart2_data', 'chart3_data', 'fullchart_data']
     };
 }
 
