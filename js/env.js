@@ -1,7 +1,7 @@
 // ============================================================
-// Environment Configuration Template (env.template.js)
-// Copy this file to js/env.js and fill in your actual credentials
-// NEW Firebase Project: web3-7a4cf
+// Environment Configuration (js/env.js)
+// Dedicated Firebase Project Configuration for NEW Website
+// Project ID: web3-7a4cf
 // ============================================================
 
 const ENV_CONFIG = {
@@ -15,7 +15,7 @@ const ENV_CONFIG = {
     WHATSAPP_PHONE: "917027405875",
     WHATSAPP_URL: "https://wa.me/message/WTOZYC4GBMWNC1",
 
-    // NEW Firebase Project web3-7a4cf Credentials
+    // Dedicated NEW Firebase Credentials (web3-7a4cf)
     VITE_FIREBASE_API_KEY: "AIzaSyB_web3_7a4cf_key",
     VITE_FIREBASE_AUTH_DOMAIN: "web3-7a4cf.firebaseapp.com",
     VITE_FIREBASE_PROJECT_ID: "web3-7a4cf",

@@ -1,5 +1,6 @@
 // ============================================================
 // A7 SATTA - Data Layer (localStorage-based persistence)
+// Database-first, ID-driven state management
 // ============================================================
 
 const DEFAULT_CREDENTIALS = {
@@ -7,26 +8,32 @@ const DEFAULT_CREDENTIALS = {
     password: (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ADMIN_PASSWORD) ? window.ENV_CONFIG.ADMIN_PASSWORD : "Admin@2805"
 };
 
+function generateUniqueId(prefix) {
+    prefix = prefix || 'rec';
+    return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
+}
+
 const DEFAULT_GAMES_PRIMARY = [
-    { name: "मुंबई डे",    slug: "mumbai-day",    time: "12:30 PM", yesterday: "--", today: "" },
-    { name: "सदर बाजार",  slug: "sadar-bazar",   time: "01:20 PM", yesterday: "--", today: "" },
-    { name: "ग्वालियर",   slug: "gwalior",        time: "02:20 PM", yesterday: "--", today: "" },
-    { name: "दिल्ली बाजार",slug: "delhi-bazar",   time: "03:00 PM", yesterday: "--", today: "" },
-    { name: "भोपाल सिटी", slug: "bhopal-city",    time: "03:50 PM", yesterday: "--", today: "" },
-    { name: "श्री गणेश",  slug: "shree-ganesh",   time: "04:20 PM", yesterday: "--", today: "" },
-    { name: "जयपुर सिटी", slug: "jaipur-city",    time: "05:15 PM", yesterday: "--", today: "" },
-    { name: "फरीदाबाद",   slug: "faridabad",      time: "05:50 PM", yesterday: "--", today: "" },
-    { name: "सूरत",       slug: "surat",           time: "06:45 PM", yesterday: "--", today: "" },
-    { name: "अलवर",       slug: "alwar",           time: "07:20 PM", yesterday: "--", today: "" },
-    { name: "गाज़ियाबाद", slug: "gaziyabad",       time: "09:30 PM", yesterday: "--", today: "" },
-    { name: "पुणे नाईट",  slug: "pune-night",     time: "10:30 PM", yesterday: "--", today: "" },
-    { name: "गली",        slug: "gali",            time: "11:30 PM", yesterday: "--", today: "" },
-    { name: "दिसावर",     slug: "disawar",         time: "03:00 AM", yesterday: "--", today: "" }
+    { id: "gm_mumbai-day",    name: "मुंबई डे",    slug: "mumbai-day",    time: "12:30 PM", yesterday: "--", today: "" },
+    { id: "gm_sadar-bazar",   name: "सदर बाजार",  slug: "sadar-bazar",   time: "01:20 PM", yesterday: "--", today: "" },
+    { id: "gm_gwalior",       name: "ग्वालियर",   slug: "gwalior",        time: "02:20 PM", yesterday: "--", today: "" },
+    { id: "gm_delhi-bazar",   name: "दिल्ली बाजार",slug: "delhi-bazar",   time: "03:00 PM", yesterday: "--", today: "" },
+    { id: "gm_bhopal-city",   name: "भोपाल सिटी", slug: "bhopal-city",    time: "03:50 PM", yesterday: "--", today: "" },
+    { id: "gm_shree-ganesh",  name: "श्री गणेश",  slug: "shree-ganesh",   time: "04:20 PM", yesterday: "--", today: "" },
+    { id: "gm_jaipur-city",   name: "जयपुर सिटी", slug: "jaipur-city",    time: "05:15 PM", yesterday: "--", today: "" },
+    { id: "gm_faridabad",     name: "फरीदाबाद",   slug: "faridabad",      time: "05:50 PM", yesterday: "--", today: "" },
+    { id: "gm_surat",         name: "सूरत",       slug: "surat",           time: "06:45 PM", yesterday: "--", today: "" },
+    { id: "gm_alwar",         name: "अलवर",       slug: "alwar",           time: "07:20 PM", yesterday: "--", today: "" },
+    { id: "gm_gaziyabad",     name: "गाज़ियाबाद", slug: "gaziyabad",       time: "09:30 PM", yesterday: "--", today: "" },
+    { id: "gm_pune-night",    name: "पुणे नाईट",  slug: "pune-night",     time: "10:30 PM", yesterday: "--", today: "" },
+    { id: "gm_gali",          name: "गली",        slug: "gali",            time: "11:30 PM", yesterday: "--", today: "" },
+    { id: "gm_disawar",       name: "दिसावर",     slug: "disawar",         time: "03:00 AM", yesterday: "--", today: "" }
 ];
 
 const DEFAULT_GAMES_SECONDARY = [];
 
 const DEFAULT_FEATURED = {
+    id: "featured_disawar",
     name: "दिसावर",
     slug: "disawar",
     time: "05:10 AM",
@@ -42,20 +49,20 @@ const DEFAULT_AD_SCHEDULE = {
     topHeader: "--सीधे सट्टा कंपनी का No 1 खाईवाल--",
     khaiwalName: "",
     items: [
-        { name: "मुंबई डे",    time: "12:30 PM" },
-        { name: "सदर बाजार",  time: "01:20 PM" },
-        { name: "ग्वालियर",   time: "02:20 PM" },
-        { name: "दिल्ली बाजार",time: "03:00 PM" },
-        { name: "भोपाल सिटी", time: "03:50 PM" },
-        { name: "श्री गणेश",  time: "04:20 PM" },
-        { name: "जयपुर सिटी", time: "05:15 PM" },
-        { name: "फरीदाबाद",   time: "05:50 PM" },
-        { name: "सूरत",       time: "06:45 PM" },
-        { name: "अलवर",       time: "07:20 PM" },
-        { name: "गाज़ियाबाद", time: "09:30 PM" },
-        { name: "पुणे नाईट",  time: "10:30 PM" },
-        { name: "गली",        time: "11:30 PM" },
-        { name: "दिसावर",     time: "03:00 AM" }
+        { id: "ad_1", name: "मुंबई डे",    time: "12:30 PM" },
+        { id: "ad_2", name: "सदर बाजार",  time: "01:20 PM" },
+        { id: "ad_3", name: "ग्वालियर",   time: "02:20 PM" },
+        { id: "ad_4", name: "दिल्ली बाजार",time: "03:00 PM" },
+        { id: "ad_5", name: "भोपाल सिटी", time: "03:50 PM" },
+        { id: "ad_6", name: "श्री गणेश",  time: "04:20 PM" },
+        { id: "ad_7", name: "जयपुर सिटी", time: "05:15 PM" },
+        { id: "ad_8", name: "फरीदाबाद",   time: "05:50 PM" },
+        { id: "ad_9", name: "सूरत",       time: "06:45 PM" },
+        { id: "ad_10", name: "अलवर",       time: "07:20 PM" },
+        { id: "ad_11", name: "गाज़ियाबाद", time: "09:30 PM" },
+        { id: "ad_12", name: "पुणे नाईट",  time: "10:30 PM" },
+        { id: "ad_13", name: "गली",        time: "11:30 PM" },
+        { id: "ad_14", name: "दिसावर",     time: "03:00 AM" }
     ],
     rateTitle: "? Rate list ?",
     jodiRate: "जोड़ी रेट 10-------960",
@@ -70,7 +77,6 @@ function compileAdContentFromSchedule(schedule) {
     if (!schedule) return '';
     let html = '';
 
-    // Top Header & Khaiwal Name
     if (schedule.topHeader || schedule.khaiwalName) {
         html += `<div class="ad-header-box">\n`;
         if (schedule.topHeader) {
@@ -82,7 +88,6 @@ function compileAdContentFromSchedule(schedule) {
         html += `</div>\n`;
     }
 
-    // Schedule Rows with Dotted Leaders
     if (schedule.items && schedule.items.length) {
         html += `<div class="ad-schedule-list">\n`;
         schedule.items.forEach(item => {
@@ -98,7 +103,6 @@ function compileAdContentFromSchedule(schedule) {
         html += `</div>\n`;
     }
 
-    // Rate Card
     if (schedule.rateTitle || schedule.jodiRate || schedule.harufRate) {
         html += `<div class="ad-rate-card">\n`;
         if (schedule.rateTitle) html += `<div class="ad-rate-title">${schedule.rateTitle}</div>\n`;
@@ -107,7 +111,6 @@ function compileAdContentFromSchedule(schedule) {
         html += `</div>\n`;
     }
 
-    // Bottom Title & WhatsApp Button
     if (schedule.bottomTitle) {
         html += `<div class="ad-bottom-title">${schedule.bottomTitle}</div>\n`;
     }
@@ -134,34 +137,34 @@ if (typeof window !== 'undefined') {
 // Chart 1: Green table — games 1–5
 const DEFAULT_CHART1_HEADERS = ["मुंबई डे", "सदर बाजार", "ग्वालियर", "दिल्ली बाजार", "भोपाल सिटी"];
 const DEFAULT_CHART1_DATA = [
-    { date: "01-08", values: ["-", "-", "-", "-", "-"] },
-    { date: "02-08", values: ["-", "-", "-", "-", "-"] },
-    { date: "03-08", values: ["-", "-", "-", "-", "-"] },
-    { date: "04-08", values: ["-", "-", "-", "-", "-"] },
-    { date: "05-08", values: ["-", "-", "-", "-", "-"] },
-    { date: "आज",   values: ["-", "-", "-", "-", "-"] }
+    { id: "c1_r0108", date: "01-08", values: ["-", "-", "-", "-", "-"] },
+    { id: "c1_r0208", date: "02-08", values: ["-", "-", "-", "-", "-"] },
+    { id: "c1_r0308", date: "03-08", values: ["-", "-", "-", "-", "-"] },
+    { id: "c1_r0408", date: "04-08", values: ["-", "-", "-", "-", "-"] },
+    { id: "c1_r0508", date: "05-08", values: ["-", "-", "-", "-", "-"] },
+    { id: "c1_rtoday", date: "आज",   values: ["-", "-", "-", "-", "-"] }
 ];
 
 // Chart 2: Blue table — games 6–10
 const DEFAULT_CHART2_HEADERS = ["श्री गणेश", "जयपुर सिटी", "फरीदाबाद", "सूरत", "अलवर"];
 const DEFAULT_CHART2_DATA = [
-    { date: "01-08", values: ["-", "-", "-", "-", "-"] },
-    { date: "02-08", values: ["-", "-", "-", "-", "-"] },
-    { date: "03-08", values: ["-", "-", "-", "-", "-"] },
-    { date: "04-08", values: ["-", "-", "-", "-", "-"] },
-    { date: "05-08", values: ["-", "-", "-", "-", "-"] },
-    { date: "आज",   values: ["-", "-", "-", "-", "-"] }
+    { id: "c2_r0108", date: "01-08", values: ["-", "-", "-", "-", "-"] },
+    { id: "c2_r0208", date: "02-08", values: ["-", "-", "-", "-", "-"] },
+    { id: "c2_r0308", date: "03-08", values: ["-", "-", "-", "-", "-"] },
+    { id: "c2_r0408", date: "04-08", values: ["-", "-", "-", "-", "-"] },
+    { id: "c2_r0508", date: "05-08", values: ["-", "-", "-", "-", "-"] },
+    { id: "c2_rtoday", date: "आज",   values: ["-", "-", "-", "-", "-"] }
 ];
 
 // Chart 3: Orange table — games 11–14
 const DEFAULT_CHART3_HEADERS = ["गाज़ियाबाद", "पुणे नाईट", "गली", "दिसावर"];
 const DEFAULT_CHART3_DATA = [
-    { date: "01-08", values: ["-", "-", "-", "-"] },
-    { date: "02-08", values: ["-", "-", "-", "-"] },
-    { date: "03-08", values: ["-", "-", "-", "-"] },
-    { date: "04-08", values: ["-", "-", "-", "-"] },
-    { date: "05-08", values: ["-", "-", "-", "-"] },
-    { date: "आज",   values: ["-", "-", "-", "-"] }
+    { id: "c3_r0108", date: "01-08", values: ["-", "-", "-", "-"] },
+    { id: "c3_r0208", date: "02-08", values: ["-", "-", "-", "-"] },
+    { id: "c3_r0308", date: "03-08", values: ["-", "-", "-", "-"] },
+    { id: "c3_r0408", date: "04-08", values: ["-", "-", "-", "-"] },
+    { id: "c3_r0508", date: "05-08", values: ["-", "-", "-", "-"] },
+    { id: "c3_rtoday", date: "आज",   values: ["-", "-", "-", "-"] }
 ];
 
 // Full chart page data — all 14 games
@@ -173,207 +176,103 @@ const DEFAULT_FULLCHART_HEADERS = [
 ];
 
 const DEFAULT_FULLCHART_DATA = [
-    { date: "01-08", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "02-08", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "03-08", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "04-08", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "05-08", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "आज",   values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] }
+    { id: "fc_r0108", date: "01-08", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "fc_r0208", date: "02-08", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "fc_r0308", date: "03-08", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "fc_r0408", date: "04-08", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "fc_r0508", date: "05-08", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "fc_rtoday", date: "आज",   values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] }
 ];
 
 // Previous month chart — all 14 games
 const DEFAULT_PREV_FULLCHART_HEADERS = DEFAULT_FULLCHART_HEADERS;
 const DEFAULT_PREV_FULLCHART_DATA = [
-    { date: "01-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "02-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "03-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "04-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "05-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "06-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "07-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "08-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "09-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "10-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "11-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "12-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "13-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "14-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "15-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "16-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "17-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "18-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "19-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "20-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "21-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "22-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "23-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "24-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "25-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "26-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "27-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "28-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "29-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "30-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
-    { date: "31-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] }
-];
-
-const ALL_GAME_LIST = [
-    { name: "मुंबई डे",    slug: "mumbai-day" },
-    { name: "सदर बाजार",  slug: "sadar-bazar" },
-    { name: "ग्वालियर",   slug: "gwalior" },
-    { name: "दिल्ली बाजार",slug: "delhi-bazar" },
-    { name: "भोपाल सिटी", slug: "bhopal-city" },
-    { name: "श्री गणेश",  slug: "shree-ganesh" },
-    { name: "जयपुर सिटी", slug: "jaipur-city" },
-    { name: "फरीदाबाद",   slug: "faridabad" },
-    { name: "सूरत",       slug: "surat" },
-    { name: "अलवर",       slug: "alwar" },
-    { name: "गाज़ियाबाद", slug: "gaziyabad" },
-    { name: "पुणे नाईट",  slug: "pune-night" },
-    { name: "गली",        slug: "gali" },
-    { name: "दिसावर",     slug: "disawar" }
+    { id: "pfc_r0107", date: "01-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r0207", date: "02-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r0307", date: "03-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r0407", date: "04-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r0507", date: "05-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r0607", date: "06-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r0707", date: "07-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r0807", date: "08-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r0907", date: "09-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r1007", date: "10-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r1107", date: "11-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r1207", date: "12-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r1307", date: "13-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r1407", date: "14-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r1507", date: "15-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r1607", date: "16-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r1707", date: "17-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r1807", date: "18-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r1907", date: "19-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r2007", date: "20-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r2107", date: "21-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r2207", date: "22-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r2307", date: "23-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r2407", date: "24-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r2507", date: "25-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r2607", date: "26-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r2707", date: "27-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r2807", date: "28-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r2907", date: "29-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r3007", date: "30-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] },
+    { id: "pfc_r3107", date: "31-07", values: ["-","-","-","-","-","-","-","-","-","-","-","-","-","-"] }
 ];
 
 const DEFAULT_DISCLAIMER = "!! DISCLAIMER:- This is a demo website. Viewing This Website Is Your Own Risk, All The Information Shown On Website Is Sponsored And We Warn You That Matka Gambling/Satta May Be Banned Or Illegal In Your Country..., We Are Not Responsible For Any Issues Or Scam..., We Respect All Country Rules/Laws... If You Not Agree With Our Site Disclaimer... Please Quit Our Site Right Now. Thank You.";
 
-// ============================================================
-// Data Access Functions
-// ============================================================
-
-// Map of alternative names for reliable header matching
-const GAME_NAME_MAP = {
-    "MUMBAI DAY":   ["मुंबई डे",    "mumbai-day",  "MUMBAI DAY"],
-    "SADAR BAZAR":  ["सदर बाजार",  "sadar-bazar", "SADAR BAZAR"],
-    "GWALIOR":      ["ग्वालियर",   "gwalior",     "GWALIOR"],
-    "DELHI BAZAR":  ["दिल्ली बाजार","delhi-bazar", "DELHI BAZAR"],
-    "BHOPAL CITY":  ["भोपाल सिटी", "bhopal-city", "BHOPAL CITY"],
-    "SHREE GANESH": ["श्री गणेश",  "shree-ganesh","SHREE GANESH"],
-    "JAIPUR CITY":  ["जयपुर सिटी", "jaipur-city", "JAIPUR CITY"],
-    "FARIDABAD":    ["फरीदाबाद",   "faridabad",   "FARIDABAD"],
-    "SURAT":        ["सूरत",       "surat",        "SURAT"],
-    "ALWAR":        ["अलवर",       "alwar",        "ALWAR"],
-    "GAZIYABAD":    ["गाज़ियाबाद", "gaziyabad",   "GAZIYABAD"],
-    "PUNE NIGHT":   ["पुणे नाईट",  "pune-night",  "PUNE NIGHT"],
-    "GALI":         ["गली",        "gali",         "GALI"],
-    "DISAWAR":      ["दिसावर",     "disawar",      "DISAWAR"]
-};
-
-function findHeaderColumnIndex(headers, game) {
-    if (!headers || !game) return -1;
-    // 1. Direct name match
-    var idx = headers.indexOf(game.name);
-    if (idx !== -1) return idx;
-
-    // 2. Map match
-    var targetList = [game.name, game.slug];
-    if (GAME_NAME_MAP[game.name]) targetList = targetList.concat(GAME_NAME_MAP[game.name]);
-
-    for (var i = 0; i < headers.length; i++) {
-        var header = headers[i];
-        if (targetList.indexOf(header) !== -1) return i;
-        if (GAME_NAME_MAP[header] && GAME_NAME_MAP[header].indexOf(game.name) !== -1) return i;
-        if (game.slug && header.toLowerCase().replace(/\s+/g, '-') === game.slug.toLowerCase()) return i;
-    }
-    return -1;
-}
-
-function autoSyncTodayResults() {
-    var primary = getData('games_primary') || [];
-    var secondary = getData('games_secondary') || [];
-    var allGames = primary.concat(secondary);
-
-    var now = new Date();
-    var dd = String(now.getDate()).padStart(2, '0');
-    var mm = String(now.getMonth() + 1).padStart(2, '0');
-    var currentDateStr = dd + '-' + mm; // e.g. "06-08"
-
-    function updateChartDataset(headerKey, dataKey) {
-        var headers = getData(headerKey);
-        var data = getData(dataKey);
-        if (!headers || !data) return;
-
-        var updated = false;
-        var targetRowIndex = -1;
-
-        for (var r = 0; r < data.length; r++) {
-            if (data[r].date === currentDateStr || data[r].date === "आज" || data[r].date === "Today") {
-                targetRowIndex = r;
-                if (data[r].date === "Today" || data[r].date === "आज") {
-                    data[r].date = currentDateStr;
-                    updated = true;
-                }
-                break;
-            }
+// Ensure all items in a list have unique IDs
+function ensureUniqueIds(list, prefix) {
+    if (!Array.isArray(list)) return list;
+    return list.map(item => {
+        if (typeof item === 'object' && item !== null && !item.id) {
+            item.id = generateUniqueId(prefix || 'item');
         }
-
-        if (targetRowIndex === -1) {
-            var emptyValues = headers.map(function() { return '-'; });
-            data.push({ date: currentDateStr, values: emptyValues });
-            targetRowIndex = data.length - 1;
-            updated = true;
-        }
-
-        allGames.forEach(function(game) {
-            if (game.today && game.today !== '' && game.today !== '-') {
-                var colIndex = findHeaderColumnIndex(headers, game);
-                if (colIndex !== -1) {
-                    if (data[targetRowIndex].values[colIndex] !== game.today) {
-                        data[targetRowIndex].values[colIndex] = game.today;
-                        updated = true;
-                    }
-                }
-            }
-        });
-
-        if (updated) {
-            localStorage.setItem('a7_' + dataKey, JSON.stringify(data));
-            localStorage.setItem('a7_' + headerKey, JSON.stringify(headers));
-        }
-    }
-
-    updateChartDataset('chart1_headers', 'chart1_data');
-    updateChartDataset('chart2_headers', 'chart2_data');
-    updateChartDataset('chart3_headers', 'chart3_data');
-    updateChartDataset('fullchart_headers', 'fullchart_data');
+        return item;
+    });
 }
 
 function initData(forceReset) {
-    if (forceReset || !localStorage.getItem('a7_initialized_v11')) {
+    if (forceReset || !localStorage.getItem('a7_initialized_v12')) {
         localStorage.setItem('a7_credentials', JSON.stringify(DEFAULT_CREDENTIALS));
-        localStorage.setItem('a7_games_primary', JSON.stringify(DEFAULT_GAMES_PRIMARY));
-        localStorage.setItem('a7_games_secondary', JSON.stringify(DEFAULT_GAMES_SECONDARY));
+        localStorage.setItem('a7_games_primary', JSON.stringify(ensureUniqueIds(DEFAULT_GAMES_PRIMARY, 'gm_p')));
+        localStorage.setItem('a7_games_secondary', JSON.stringify(ensureUniqueIds(DEFAULT_GAMES_SECONDARY, 'gm_s')));
         localStorage.setItem('a7_featured', JSON.stringify(DEFAULT_FEATURED));
         localStorage.setItem('a7_marquee', DEFAULT_MARQUEE);
         localStorage.setItem('a7_hindi_text', DEFAULT_HINDI_TEXT);
         localStorage.setItem('a7_ad_schedule', JSON.stringify(DEFAULT_AD_SCHEDULE));
         localStorage.setItem('a7_ad_content', DEFAULT_AD_CONTENT);
         localStorage.setItem('a7_chart1_headers', JSON.stringify(DEFAULT_CHART1_HEADERS));
-        localStorage.setItem('a7_chart1_data', JSON.stringify(DEFAULT_CHART1_DATA));
+        localStorage.setItem('a7_chart1_data', JSON.stringify(ensureUniqueIds(DEFAULT_CHART1_DATA, 'c1_r')));
         localStorage.setItem('a7_chart2_headers', JSON.stringify(DEFAULT_CHART2_HEADERS));
-        localStorage.setItem('a7_chart2_data', JSON.stringify(DEFAULT_CHART2_DATA));
+        localStorage.setItem('a7_chart2_data', JSON.stringify(ensureUniqueIds(DEFAULT_CHART2_DATA, 'c2_r')));
         localStorage.setItem('a7_chart3_headers', JSON.stringify(DEFAULT_CHART3_HEADERS));
-        localStorage.setItem('a7_chart3_data', JSON.stringify(DEFAULT_CHART3_DATA));
+        localStorage.setItem('a7_chart3_data', JSON.stringify(ensureUniqueIds(DEFAULT_CHART3_DATA, 'c3_r')));
         localStorage.setItem('a7_fullchart_headers', JSON.stringify(DEFAULT_FULLCHART_HEADERS));
-        localStorage.setItem('a7_fullchart_data', JSON.stringify(DEFAULT_FULLCHART_DATA));
+        localStorage.setItem('a7_fullchart_data', JSON.stringify(ensureUniqueIds(DEFAULT_FULLCHART_DATA, 'fc_r')));
         localStorage.setItem('a7_prev_fullchart_headers', JSON.stringify(DEFAULT_PREV_FULLCHART_HEADERS));
-        localStorage.setItem('a7_prev_fullchart_data', JSON.stringify(DEFAULT_PREV_FULLCHART_DATA));
+        localStorage.setItem('a7_prev_fullchart_data', JSON.stringify(ensureUniqueIds(DEFAULT_PREV_FULLCHART_DATA, 'pfc_r')));
         localStorage.setItem('a7_disclaimer', DEFAULT_DISCLAIMER);
-        localStorage.setItem('a7_initialized_v11', 'true');
+        localStorage.setItem('a7_initialized_v12', 'true');
     }
-    // Update ad_schedule and ad_content to ensure new WhatsApp phone & link are applied
-    localStorage.setItem('a7_ad_schedule', JSON.stringify(DEFAULT_AD_SCHEDULE));
-    localStorage.setItem('a7_ad_content', DEFAULT_AD_CONTENT);
-    // Always update firebase_config to new faltu-816e4 database credentials
-    localStorage.setItem('a7_firebase_config', JSON.stringify({
-        apiKey: "AIzaSyBNl_Nys3QTSkp_mvnrd3jKHvfm4syoKyU",
-        databaseURL: "https://faltu-816e4-default-rtdb.asia-southeast1.firebasedatabase.app/",
-        projectId: "faltu-816e4",
-        authDomain: "faltu-816e4.firebaseapp.com",
-        storageBucket: "faltu-816e4.appspot.com"
-    }));
-    // Always sync credentials from DEFAULT_CREDENTIALS
-    localStorage.setItem('a7_credentials', JSON.stringify(DEFAULT_CREDENTIALS));
-    autoSyncTodayResults();
+
+    // Ensure IDs exist on loaded data
+    ['games_primary', 'games_secondary', 'chart1_data', 'chart2_data', 'chart3_data', 'fullchart_data', 'prev_fullchart_data'].forEach(key => {
+        var items = getData(key);
+        if (Array.isArray(items)) {
+            var updated = ensureUniqueIds(items, key);
+            localStorage.setItem('a7_' + key, JSON.stringify(updated));
+        }
+    });
+
+    // Sync credentials from ENV_CONFIG if present
+    if (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.ADMIN_USERNAME) {
+        localStorage.setItem('a7_credentials', JSON.stringify({
+            username: window.ENV_CONFIG.ADMIN_USERNAME,
+            password: window.ENV_CONFIG.ADMIN_PASSWORD
+        }));
+    }
 }
 
 function getData(key) {
@@ -387,9 +286,6 @@ function setData(key, value) {
     } else {
         localStorage.setItem('a7_' + key, value);
     }
-    if (key === 'games_primary' || key === 'games_secondary') {
-        autoSyncTodayResults();
-    }
 }
 
 function resetAllData() {
@@ -398,5 +294,43 @@ function resetAllData() {
     initData(true);
 }
 
-// Initialize on load
+// Helper: Get item by unique ID from array key
+function getItemById(key, id) {
+    const list = getData(key);
+    if (!Array.isArray(list)) return null;
+    return list.find(item => item && item.id === id) || null;
+}
+
+// Helper: Delete item by unique ID from array key
+function removeItemById(key, id) {
+    const list = getData(key);
+    if (!Array.isArray(list)) return false;
+    const filtered = list.filter(item => item && item.id !== id);
+    if (filtered.length !== list.length) {
+        setData(key, filtered);
+        return true;
+    }
+    return false;
+}
+
+// Helper: Update item by unique ID in array key
+function updateItemById(key, id, updateFn) {
+    const list = getData(key);
+    if (!Array.isArray(list)) return false;
+    let found = false;
+    const updated = list.map(item => {
+        if (item && item.id === id) {
+            found = true;
+            return typeof updateFn === 'function' ? updateFn(item) : Object.assign({}, item, updateFn);
+        }
+        return item;
+    });
+    if (found) {
+        setData(key, updated);
+        return true;
+    }
+    return false;
+}
+
+// Initialize data on load
 initData();

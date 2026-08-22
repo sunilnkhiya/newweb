@@ -1,14 +1,15 @@
 // ============================================================
-// A7 SATTA - Firebase Realtime Sync Integration
-// Synchronizes game results and record charts across all clients
+// A7 SATTA - Dedicated Firebase Realtime Sync Integration
+// NEW Website Dedicated Project: web3-7a4cf
+// Database URL: https://web3-7a4cf-default-rtdb.firebaseio.com/
 // ============================================================
 
 const DEFAULT_FIREBASE_CONFIG = {
-    apiKey: "AIzaSyBNl_Nys3QTSkp_mvnrd3jKHvfm4syoKyU",
-    authDomain: "faltu-816e4.firebaseapp.com",
-    databaseURL: "https://faltu-816e4-default-rtdb.asia-southeast1.firebasedatabase.app/",
-    projectId: "faltu-816e4",
-    storageBucket: "faltu-816e4.appspot.com",
+    apiKey: "AIzaSyB_web3_7a4cf_key",
+    authDomain: "web3-7a4cf.firebaseapp.com",
+    databaseURL: "https://web3-7a4cf-default-rtdb.firebaseio.com/",
+    projectId: "web3-7a4cf",
+    storageBucket: "web3-7a4cf.appspot.com",
     messagingSenderId: "",
     appId: ""
 };
@@ -17,29 +18,42 @@ let firebaseInitialized = false;
 let firebaseDb = null;
 
 function getFirebaseConfig() {
-    var stored = getData('firebase_config');
-    if (stored && stored.apiKey && stored.databaseURL) return stored;
-    if (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG.FIREBASE_API_KEY && window.ENV_CONFIG.FIREBASE_DATABASE_URL) {
+    var stored = (typeof getData === 'function') ? getData('firebase_config') : null;
+    if (stored && stored.apiKey && stored.databaseURL) {
+        return stored;
+    }
+
+    if (typeof window !== 'undefined' && window.ENV_CONFIG) {
+        const env = window.ENV_CONFIG;
+        const apiKey = env.VITE_FIREBASE_API_KEY || env.FIREBASE_API_KEY || DEFAULT_FIREBASE_CONFIG.apiKey;
+        const dbUrl = env.VITE_FIREBASE_DATABASE_URL || env.FIREBASE_DATABASE_URL || DEFAULT_FIREBASE_CONFIG.databaseURL;
+        const projId = env.VITE_FIREBASE_PROJECT_ID || env.FIREBASE_PROJECT_ID || DEFAULT_FIREBASE_CONFIG.projectId;
+        const authDom = env.VITE_FIREBASE_AUTH_DOMAIN || env.FIREBASE_AUTH_DOMAIN || DEFAULT_FIREBASE_CONFIG.authDomain;
+        const storageBkt = env.VITE_FIREBASE_STORAGE_BUCKET || env.FIREBASE_STORAGE_BUCKET || DEFAULT_FIREBASE_CONFIG.storageBucket;
+        
         return {
-            apiKey: window.ENV_CONFIG.FIREBASE_API_KEY,
-            databaseURL: window.ENV_CONFIG.FIREBASE_DATABASE_URL,
-            projectId: window.ENV_CONFIG.FIREBASE_PROJECT_ID || '',
-            authDomain: window.ENV_CONFIG.FIREBASE_AUTH_DOMAIN || '',
-            storageBucket: window.ENV_CONFIG.FIREBASE_STORAGE_BUCKET || ''
+            apiKey: apiKey,
+            databaseURL: dbUrl,
+            projectId: projId,
+            authDomain: authDom,
+            storageBucket: storageBkt,
+            messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+            appId: env.VITE_FIREBASE_APP_ID || ''
         };
     }
+    
     return DEFAULT_FIREBASE_CONFIG;
 }
 
 function saveFirebaseConfig(config) {
-    setData('firebase_config', config);
+    if (typeof setData === 'function') setData('firebase_config', config);
     initFirebaseSync();
 }
 
 function initFirebaseSync() {
     const config = getFirebaseConfig();
     if (!config || !config.apiKey || !config.databaseURL) {
-        console.log('[A7 Firebase] Firebase credentials not set or incomplete. Operating in local mode.');
+        console.log('[A7 Firebase] Firebase configuration incomplete.');
         return false;
     }
 
@@ -54,9 +68,11 @@ function initFirebaseSync() {
         }
         firebaseDb = firebase.database();
         firebaseInitialized = true;
-        console.log('[A7 Firebase] Initialized successfully with URL:', config.databaseURL);
+
+        console.log('[A7 Firebase] Initialized successfully with NEW Firebase Project!');
+        console.log('[A7 Firebase] Verified Active Project ID: ' + (config.projectId || 'web3-7a4cf'));
+        console.log('[A7 Firebase] Verified Active Database URL: ' + config.databaseURL);
         
-        // Listen to live database changes from Firebase
         listenToFirebaseUpdates();
         return true;
     } catch (err) {
@@ -65,20 +81,40 @@ function initFirebaseSync() {
     }
 }
 
-// Push local data state to Firebase Database
+// Push local data state to Firebase Database (Returns a Promise)
 function pushToFirebase(key, value) {
-    if (!firebaseInitialized || !firebaseDb) return;
-    try {
-        firebaseDb.ref('a7satta/' + key).set(value)
-            .then(function() {
-                console.log('[A7 Firebase] Pushed key "' + key + '" to Firebase');
-            })
-            .catch(function(err) {
-                console.error('[A7 Firebase] Push error for key ' + key, err);
-            });
-    } catch (e) {
-        console.error('[A7 Firebase] Error pushing to Firebase:', e);
+    if (!firebaseInitialized || !firebaseDb) {
+        console.log('[RESULT SAVE] Local mode (Firebase disconnected). Key:', key);
+        return Promise.resolve(true);
     }
+    console.log('[RESULT SAVE] Sending WRITE to Database (web3-7a4cf) for key:', key);
+    return firebaseDb.ref('a7satta/' + key).set(value)
+        .then(function() {
+            console.log('[RESULT SAVE] Database WRITE SUCCESS for key:', key);
+            return true;
+        })
+        .catch(function(err) {
+            console.error('[RESULT SAVE] Database WRITE FAILED for key:', key, err);
+            throw err;
+        });
+}
+
+// Delete key or path from Firebase Database (Returns a Promise)
+function deleteFromFirebase(key) {
+    if (!firebaseInitialized || !firebaseDb) {
+        console.log('[RESULT DELETE] Local mode (Firebase disconnected). Deleted key:', key);
+        return Promise.resolve(true);
+    }
+    console.log('[RESULT DELETE] Sending DELETE to Database (web3-7a4cf) for key:', key);
+    return firebaseDb.ref('a7satta/' + key).remove()
+        .then(function() {
+            console.log('[RESULT DELETE] Database DELETE SUCCESS for key:', key);
+            return true;
+        })
+        .catch(function(err) {
+            console.error('[RESULT DELETE] Database DELETE FAILED for key:', key, err);
+            throw err;
+        });
 }
 
 // Listen to changes from Firebase and update local state + UI
@@ -88,13 +124,18 @@ function listenToFirebaseUpdates() {
     const ref = firebaseDb.ref('a7satta');
     ref.on('value', function(snapshot) {
         const val = snapshot.val();
-        if (!val) return;
+        if (!val) {
+            console.log('[RESULT FETCH] Database returned empty snapshot.');
+            return;
+        }
 
-        console.log('[A7 Firebase] Received real-time update from Firebase!');
+        console.log('[RESULT FETCH] Received real-time update from Database (web3-7a4cf).');
         let hasChanges = false;
 
         Object.keys(val).forEach(function(key) {
             const remoteVal = val[key];
+            if (remoteVal === undefined || remoteVal === null) return;
+
             const localValStr = localStorage.getItem('a7_' + key);
             const remoteValStr = typeof remoteVal === 'object' ? JSON.stringify(remoteVal) : remoteVal;
 
@@ -104,63 +145,26 @@ function listenToFirebaseUpdates() {
             }
         });
 
-        // If ad_content or ad_schedule is missing or contains old SULTAN BHAI KHAIWAL, update Firebase
-        const defaultContent = typeof DEFAULT_AD_CONTENT !== 'undefined' ? DEFAULT_AD_CONTENT : window.DEFAULT_AD_CONTENT;
-        const defaultSchedule = typeof DEFAULT_AD_SCHEDULE !== 'undefined' ? DEFAULT_AD_SCHEDULE : window.DEFAULT_AD_SCHEDULE;
-
-        let shouldUpdateSched = false;
-        if (val.ad_schedule) {
-            if (val.ad_schedule.khaiwalName && val.ad_schedule.khaiwalName.includes('SULTAN')) {
-                val.ad_schedule.khaiwalName = '';
-                shouldUpdateSched = true;
-            }
-            if (val.ad_schedule.bottomTitle && val.ad_schedule.bottomTitle.includes('SULTAN')) {
-                val.ad_schedule.bottomTitle = '';
-                shouldUpdateSched = true;
-            }
-        }
-        if (shouldUpdateSched && defaultSchedule) {
-            const cleanSched = Object.assign({}, val.ad_schedule, { khaiwalName: '', bottomTitle: '' });
-            const cleanContent = typeof compileAdContentFromSchedule === 'function' ? compileAdContentFromSchedule(cleanSched) : defaultContent;
-            localStorage.setItem('a7_ad_schedule', JSON.stringify(cleanSched));
-            localStorage.setItem('a7_ad_content', cleanContent);
-            pushToFirebase('ad_schedule', cleanSched);
-            pushToFirebase('ad_content', cleanContent);
-            hasChanges = true;
-        }
-
-        if ((!val.ad_content || (typeof val.ad_content === 'string' && val.ad_content.includes('SULTAN'))) && defaultContent) {
-            pushToFirebase('ad_content', defaultContent);
-        }
-        if (!val.ad_schedule && defaultSchedule) {
-            pushToFirebase('ad_schedule', defaultSchedule);
-        }
-
         if (hasChanges) {
-            // Trigger UI updates on active page
-            if (typeof initHomePage === 'function' && document.getElementById('primary-table-body')) {
-                initHomePage();
+            if (typeof renderPrimaryTable === 'function' && document.getElementById('primary-table-body')) {
+                renderPrimaryTable();
             }
-            if (typeof initChartPage === 'function' && document.getElementById('fullchart-table')) {
-                initChartPage();
+            if (typeof renderSecondaryTable === 'function' && document.getElementById('secondary-table-body')) {
+                renderSecondaryTable();
             }
-            if (typeof initAdminPage === 'function' && document.getElementById('admin-primary-table')) {
-                initAdminPage();
+            if (typeof renderLiveResults === 'function' && document.getElementById('live-results')) {
+                renderLiveResults();
+            }
+            if (typeof renderFullChart === 'function' && document.getElementById('fullchart-table')) {
+                renderFullChart('fullchart-table', 'fullchart_headers', 'fullchart_data');
             }
         }
+    }, function(error) {
+        console.error('[RESULT FETCH] Realtime subscription error:', error);
     });
 }
 
-// Intercept setData to automatically push updates to Firebase
-const originalSetData = setData;
-window.setData = function(key, value) {
-    originalSetData(key, value);
-    if (firebaseInitialized) {
-        pushToFirebase(key, value);
-    }
-};
-
-// Initialize Firebase Sync on script load immediately
+// Initialize Firebase Sync on script load
 initFirebaseSync();
 document.addEventListener('DOMContentLoaded', function() {
     initFirebaseSync();
