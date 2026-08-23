@@ -343,8 +343,45 @@ function renderFullChart(tableId, headerKey, dataKey) {
 // Initialize Pages
 // ============================================================
 
+function updateDynamicMonthLabels() {
+    const monthNames = [
+        'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+        'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+    ];
+
+    try {
+        const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
+        const currentDateStr = formatter.format(new Date());
+        const [yearNum, monthNum] = currentDateStr.split('-').map(Number);
+
+        const curMonthIdx = monthNum - 1; // 0..11
+        const curYear = yearNum;
+
+        const curMonthName = monthNames[curMonthIdx];
+        const curLabel = `${curMonthName} RESULT CHART ${curYear}`;
+
+        let prevMonthIdx = curMonthIdx - 1;
+        let prevYear = curYear;
+        if (prevMonthIdx < 0) {
+            prevMonthIdx = 11;
+            prevYear = curYear - 1;
+        }
+        const prevMonthName = monthNames[prevMonthIdx];
+        const prevLabel = `${prevMonthName} RESULT CHART ${prevYear}`;
+
+        const curEls = document.querySelectorAll('#current-month-chart-title');
+        curEls.forEach(el => { el.textContent = curLabel; });
+
+        const prevEls = document.querySelectorAll('#prev-month-chart-title');
+        prevEls.forEach(el => { el.textContent = prevLabel; });
+    } catch (e) {
+        console.error('[DYNAMIC MONTH LABELS] Error updating month labels:', e);
+    }
+}
+
 function initHomePage() {
     updateClock();
+    updateDynamicMonthLabels();
     renderMarquee();
     renderHindiText();
     renderFeatured();
@@ -388,6 +425,75 @@ function filterMonthChart(monthVal) {
     renderYearChart();
 }
 
+function populateMonthFilterDropdown(data) {
+    const selectEl = document.getElementById('month-filter-select');
+    if (!selectEl) return;
+
+    if (!Array.isArray(data) || data.length === 0) return;
+
+    const monthNamesMap = {
+        '01': 'January', '02': 'February', '03': 'March', '04': 'April',
+        '05': 'May', '06': 'June', '07': 'July', '08': 'August',
+        '09': 'September', '10': 'October', '11': 'November', '12': 'December'
+    };
+
+    const yearMonthMap = {};
+
+    data.forEach(row => {
+        if (!row || !row.date) return;
+        const parts = row.date.split('-');
+        if (parts.length === 3) {
+            const m = parts[1].padStart(2, '0');
+            const y = parts[2];
+            if (monthNamesMap[m]) {
+                if (!yearMonthMap[y]) yearMonthMap[y] = new Set();
+                yearMonthMap[y].add(m);
+            }
+        }
+    });
+
+    const years = Object.keys(yearMonthMap).sort((a, b) => Number(b) - Number(a));
+    if (years.length === 0) return;
+
+    const previousSelection = currentMonthFilter || selectEl.value || 'ALL';
+
+    let minKey = '9999-99';
+    let maxKey = '0000-00';
+    years.forEach(y => {
+        yearMonthMap[y].forEach(m => {
+            const key = `${y}-${m}`;
+            if (key < minKey) minKey = key;
+            if (key > maxKey) maxKey = key;
+        });
+    });
+
+    let allLabel = 'All Months';
+    if (minKey !== '9999-99' && maxKey !== '0000-00') {
+        const [minY, minM] = minKey.split('-');
+        const [maxY, maxM] = maxKey.split('-');
+        const minName = (monthNamesMap[minM] || '').substring(0, 3);
+        const maxName = (monthNamesMap[maxM] || '').substring(0, 3);
+        allLabel = `All Months (${minName} ${minY} – ${maxName} ${maxY})`;
+    }
+
+    let html = `<option value="ALL">${allLabel}</option>`;
+
+    years.forEach(y => {
+        html += `<optgroup label="${y} Months">`;
+        const months = Array.from(yearMonthMap[y]).sort((a, b) => Number(a) - Number(b));
+        months.forEach(m => {
+            const mName = monthNamesMap[m];
+            const filterVal = `-${m}-${y}`;
+            html += `<option value="${filterVal}">${mName} ${y}</option>`;
+        });
+        html += `</optgroup>`;
+    });
+
+    selectEl.innerHTML = html;
+    selectEl.value = previousSelection;
+    if (selectEl.selectedIndex === -1) selectEl.value = 'ALL';
+}
+
 function renderYearChart() {
     const table = document.getElementById('yearchart-table');
     const emptyMsg = document.getElementById('yearchart-empty-msg');
@@ -395,6 +501,8 @@ function renderYearChart() {
 
     const headers = getData('year_chart_headers') || (typeof DEFAULT_YEAR_CHART_HEADERS !== 'undefined' ? DEFAULT_YEAR_CHART_HEADERS : []);
     const data = getData('year_chart_data') || [];
+
+    populateMonthFilterDropdown(data);
 
     if (!Array.isArray(headers) || headers.length === 0 || !Array.isArray(data) || data.length === 0) {
         table.style.display = 'none';
@@ -486,6 +594,7 @@ function renderYearChart() {
 
 function initChartPage() {
     updateClock();
+    updateDynamicMonthLabels();
     renderMarquee();
     renderLiveResults();
     renderFullChart('fullchart-table', 'fullchart_headers', 'fullchart_data');
