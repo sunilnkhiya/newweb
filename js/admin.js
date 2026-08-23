@@ -127,6 +127,14 @@ function updateSettingsGateState() {
 // Tab System
 // ============================================================
 
+function renderAdminContentEditors() {
+    renderAdminTopGameNames();
+    renderAdminMarquee();
+    renderAdminHindiText();
+    renderAdminAdContent();
+    renderAdminDisclaimer();
+}
+
 function switchTab(tabName) {
     document.querySelectorAll('.admin-tab').forEach(function(t) { t.classList.remove('active'); });
     document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
@@ -135,6 +143,10 @@ function switchTab(tabName) {
     var tabContent = document.getElementById('tab-' + tabName);
     if (tabBtn) tabBtn.classList.add('active');
     if (tabContent) tabContent.classList.add('active');
+
+    if (tabName === 'content') {
+        renderAdminContentEditors();
+    }
 
     if (tabName === 'settings') {
         updateSettingsGateState();
@@ -795,20 +807,30 @@ function renderAdminMarquee() {
     var container = document.getElementById('admin-marquee');
     if (!container) return;
     var marquee = getData('marquee');
+    if (marquee === null || marquee === undefined || marquee === 'null' || marquee === 'undefined') {
+        marquee = '';
+    }
 
-    var html = '<textarea class="admin-textarea" id="marquee-input">' + (marquee || '') + '</textarea>';
-    html += '<div class="mt-10"><button type="button" class="btn-admin" onclick="saveMarquee(this)">💾 Save Marquee</button></div>';
+    var html = '<textarea class="admin-textarea" id="marquee-input" style="width:100%;min-height:100px;padding:10px;border-radius:6px;border:1px solid #cbd5e1;font-size:14px;" placeholder="Enter marquee banner scrolling text...">' + marquee + '</textarea>';
+    html += '<div class="mt-10" style="margin-top:10px;"><button type="button" class="btn-admin" onclick="saveMarquee(this)" style="padding:10px 25px;font-size:14px;font-weight:700;">💾 Save Marquee</button></div>';
     container.innerHTML = html;
 }
 
 function saveMarquee(btnEl) {
-    var val = document.getElementById('marquee-input').value;
+    var inputEl = document.getElementById('marquee-input');
+    if (!inputEl) return;
+    var val = inputEl.value;
+    if (val === null || val === undefined || val.trim() === 'null' || val.trim() === 'undefined') {
+        val = '';
+    }
+
     setElementLoading(btnEl, true, 'Saving...');
     console.log('[RESULT UPDATE] Saving Marquee text...');
     pushToFirebase('marquee', val)
         .then(function() {
             setData('marquee', val);
             showToast('Marquee saved to database!');
+            if (typeof renderMarquee === 'function') renderMarquee();
         })
         .catch(function(err) {
             console.error('[RESULT UPDATE] Marquee save failed:', err);
@@ -825,20 +847,30 @@ function renderAdminHindiText() {
     var container = document.getElementById('admin-hindi');
     if (!container) return;
     var text = getData('hindi_text');
+    if (text === null || text === undefined || text === 'null' || text === 'undefined') {
+        text = '';
+    }
 
-    var html = '<input class="admin-input" id="hindi-input" value="' + (text || '') + '">';
-    html += '<div class="mt-10"><button type="button" class="btn-admin" onclick="saveHindiText(this)">💾 Save</button></div>';
+    var html = '<input class="admin-input" id="hindi-input" value="' + text + '" style="width:100%;padding:10px;border-radius:6px;border:1px solid #cbd5e1;font-size:14px;" placeholder="Enter Hindi announcement text...">';
+    html += '<div class="mt-10" style="margin-top:10px;"><button type="button" class="btn-admin" onclick="saveHindiText(this)" style="padding:10px 25px;font-size:14px;font-weight:700;">💾 Save</button></div>';
     container.innerHTML = html;
 }
 
 function saveHindiText(btnEl) {
-    var val = document.getElementById('hindi-input').value;
+    var inputEl = document.getElementById('hindi-input');
+    if (!inputEl) return;
+    var val = inputEl.value;
+    if (val === null || val === undefined || val.trim() === 'null' || val.trim() === 'undefined') {
+        val = '';
+    }
+
     setElementLoading(btnEl, true, 'Saving...');
     console.log('[RESULT UPDATE] Saving Hindi announcement text...');
     pushToFirebase('hindi_text', val)
         .then(function() {
             setData('hindi_text', val);
             showToast('Hindi text saved to database!');
+            if (typeof renderHindiText === 'function') renderHindiText();
         })
         .catch(function(err) {
             console.error('[RESULT UPDATE] Hindi text save failed:', err);
@@ -1056,20 +1088,30 @@ function renderAdminDisclaimer() {
     var container = document.getElementById('admin-disclaimer');
     if (!container) return;
     var text = getData('disclaimer');
+    if (text === null || text === undefined || text === 'null' || text === 'undefined') {
+        text = '';
+    }
 
-    var html = '<textarea class="admin-textarea" id="disclaimer-input">' + (text || '') + '</textarea>';
-    html += '<div class="mt-10"><button type="button" class="btn-admin" onclick="saveDisclaimer(this)">💾 Save Disclaimer</button></div>';
+    var html = '<textarea class="admin-textarea" id="disclaimer-input" style="width:100%;min-height:100px;padding:10px;border-radius:6px;border:1px solid #cbd5e1;font-size:14px;" placeholder="Enter footer disclaimer text...">' + text + '</textarea>';
+    html += '<div class="mt-10" style="margin-top:10px;"><button type="button" class="btn-admin" onclick="saveDisclaimer(this)" style="padding:10px 25px;font-size:14px;font-weight:700;">💾 Save Disclaimer</button></div>';
     container.innerHTML = html;
 }
 
 function saveDisclaimer(btnEl) {
-    var val = document.getElementById('disclaimer-input').value;
+    var inputEl = document.getElementById('disclaimer-input');
+    if (!inputEl) return;
+    var val = inputEl.value;
+    if (val === null || val === undefined || val.trim() === 'null' || val.trim() === 'undefined') {
+        val = '';
+    }
+
     setElementLoading(btnEl, true, 'Saving...');
     console.log('[RESULT UPDATE] Saving Disclaimer...');
     pushToFirebase('disclaimer', val)
         .then(function() {
             setData('disclaimer', val);
             showToast('Disclaimer saved to database!');
+            if (typeof renderDisclaimer === 'function') renderDisclaimer();
         })
         .catch(function(err) {
             console.error('[RESULT UPDATE] Disclaimer save failed:', err);

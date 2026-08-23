@@ -19,12 +19,24 @@ setInterval(updateClock, 1000);
 
 function renderMarquee() {
     const el = document.getElementById('marquee-text');
-    if (el) el.innerHTML = '<b>' + getData('marquee') + '</b>';
+    if (!el) return;
+    const val = getData('marquee');
+    if (!val || val === 'null' || val === 'undefined') {
+        el.innerHTML = '';
+        return;
+    }
+    el.innerHTML = '<b>' + val + '</b>';
 }
 
 function renderHindiText() {
     const el = document.getElementById('hindi-text');
-    if (el) el.textContent = getData('hindi_text');
+    if (!el) return;
+    const val = getData('hindi_text');
+    if (!val || val === 'null' || val === 'undefined') {
+        el.textContent = '';
+        return;
+    }
+    el.textContent = val;
 }
 
 function renderFeatured() {
