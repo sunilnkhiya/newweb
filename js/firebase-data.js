@@ -16,6 +16,7 @@ const DEFAULT_FIREBASE_CONFIG = {
 
 let firebaseInitialized = false;
 let firebaseDb = null;
+const activeFirebaseListeners = {};
 
 // Get Firebase configuration (Always uses dedicated web3-7a4cf real configuration)
 function getFirebaseConfig() {
@@ -90,7 +91,7 @@ function initFirebaseSync() {
         console.log('[A7 Firebase] Verified Messaging Sender ID: ' + config.messagingSenderId);
         console.log('[A7 Firebase] Verified App ID: ' + config.appId);
         
-        listenToFirebaseUpdates();
+        setupPageListeners();
         return true;
     } catch (err) {
         console.error('[A7 Firebase] Initialization error:', err);
@@ -163,57 +164,115 @@ function deleteFromFirebase(key) {
         });
 }
 
-// Listen to changes from Firebase and update local cache + UI (Firebase is Source of Truth)
-function listenToFirebaseUpdates() {
+// Reusable Path-Specific Realtime Listener Helper (Prevents Duplicate Subscriptions)
+function listenToKey(key, callbacks) {
     if (!firebaseInitialized || !firebaseDb) return;
+    if (activeFirebaseListeners[key]) return; // Duplicate listener prevention
 
-    const ref = firebaseDb.ref('a7satta');
+    activeFirebaseListeners[key] = true;
+    const path = 'a7satta/' + key;
+    const ref = firebaseDb.ref(path);
+
     ref.on('value', function(snapshot) {
         const val = snapshot.val();
-        if (!val) {
-            console.log('[RESULT FETCH] Database returned empty snapshot.');
-            return;
-        }
+        const localValStr = localStorage.getItem('a7_' + key);
+        const remoteValStr = (val !== null && typeof val === 'object') ? JSON.stringify(val) : (val !== null ? String(val) : '');
 
-        console.log('[RESULT FETCH] Received real-time update from Database (web3-7a4cf).');
-        let hasChanges = false;
-
-        Object.keys(val).forEach(function(key) {
-            const remoteVal = val[key];
-            if (remoteVal === undefined || remoteVal === null) return;
-
-            const localValStr = localStorage.getItem('a7_' + key);
-            const remoteValStr = typeof remoteVal === 'object' ? JSON.stringify(remoteVal) : remoteVal;
-
-            if (localValStr !== remoteValStr) {
+        if (localValStr !== remoteValStr) {
+            if (val !== null) {
                 localStorage.setItem('a7_' + key, remoteValStr);
-                hasChanges = true;
+            } else {
+                localStorage.removeItem('a7_' + key);
             }
-        });
+            console.log('[RESULT FETCH] Updated: ' + key);
 
-        if (hasChanges) {
-            if (typeof renderPrimaryTable === 'function' && document.getElementById('primary-table-body')) {
-                renderPrimaryTable();
-            }
-            if (typeof renderSecondaryTable === 'function' && document.getElementById('secondary-table-body')) {
-                renderSecondaryTable();
-            }
-            if (typeof renderLiveResults === 'function' && document.getElementById('live-results')) {
-                renderLiveResults();
-            }
-            if (typeof renderFullChart === 'function' && document.getElementById('fullchart-table')) {
-                renderFullChart('fullchart-table', 'fullchart_headers', 'fullchart_data');
-            }
-            if (typeof renderYearChart === 'function' && document.getElementById('yearchart-table')) {
-                renderYearChart();
-            }
-            if (typeof renderAdminYearChart === 'function' && document.getElementById('admin-yearchart-body')) {
-                renderAdminYearChart();
+            if (Array.isArray(callbacks)) {
+                callbacks.forEach(function(cb) {
+                    if (typeof cb === 'function') {
+                        try { cb(); } catch (e) { console.error('[RESULT FETCH] Callback error for ' + key + ':', e); }
+                    }
+                });
+            } else if (typeof callbacks === 'function') {
+                try { callbacks(); } catch (e) { console.error('[RESULT FETCH] Callback error for ' + key + ':', e); }
             }
         }
     }, function(error) {
-        console.error('[RESULT FETCH] Realtime subscription error:', error);
+        console.error('[RESULT FETCH] Error listening to ' + key + ':', error);
     });
+}
+
+// Setup Page-Aware Realtime Listeners
+function setupPageListeners() {
+    if (!firebaseInitialized || !firebaseDb) return;
+
+    const isHomepage = !!(document.getElementById('primary-table-body') || document.getElementById('featured-section'));
+    const isChartPage = !!(document.getElementById('fullchart-table') || document.getElementById('yearchart-table'));
+    const isAdminPage = !!(document.getElementById('admin-primary-table') || document.getElementById('stat-total-games'));
+
+    if (isHomepage) {
+        console.log('[A7 Firebase] Registering Page-Specific Realtime Listeners for HOMEPAGE (index.html)');
+        listenToKey('marquee', [function() { if (typeof renderMarquee === 'function') renderMarquee(); }]);
+        listenToKey('hindi_text', [function() { if (typeof renderHindiText === 'function') renderHindiText(); }]);
+        listenToKey('featured', [function() { if (typeof renderFeatured === 'function') renderFeatured(); }]);
+        listenToKey('games_primary', [
+            function() { if (typeof renderPrimaryTable === 'function') renderPrimaryTable(); },
+            function() { if (typeof renderLiveResults === 'function') renderLiveResults(); }
+        ]);
+        listenToKey('games_secondary', [
+            function() { if (typeof renderSecondaryTable === 'function') renderSecondaryTable(); },
+            function() { if (typeof renderLiveResults === 'function') renderLiveResults(); }
+        ]);
+        listenToKey('ad_schedule', [function() { if (typeof renderAdContent === 'function') renderAdContent(); }]);
+        listenToKey('ad_content', [function() { if (typeof renderAdContent === 'function') renderAdContent(); }]);
+        listenToKey('disclaimer', [function() { if (typeof renderDisclaimer === 'function') renderDisclaimer(); }]);
+        listenToKey('chart1_headers', [function() { if (typeof renderChart === 'function') renderChart('chart1-table', 'chart1_headers', 'chart1_data', '#dbec95'); }]);
+        listenToKey('chart1_data', [function() { if (typeof renderChart === 'function') renderChart('chart1-table', 'chart1_headers', 'chart1_data', '#dbec95'); }]);
+        listenToKey('chart2_headers', [function() { if (typeof renderChart === 'function') renderChart('chart2-table', 'chart2_headers', 'chart2_data', '#95ceec'); }]);
+        listenToKey('chart2_data', [function() { if (typeof renderChart === 'function') renderChart('chart2-table', 'chart2_headers', 'chart2_data', '#95ceec'); }]);
+        listenToKey('chart3_headers', [function() { if (typeof renderChart === 'function') renderChart('chart3-table', 'chart3_headers', 'chart3_data', '#f0c987'); }]);
+        listenToKey('chart3_data', [function() { if (typeof renderChart === 'function') renderChart('chart3-table', 'chart3_headers', 'chart3_data', '#f0c987'); }]);
+    } else if (isChartPage) {
+        console.log('[A7 Firebase] Registering Page-Specific Realtime Listeners for CHART PAGE (chart.html)');
+        listenToKey('marquee', [function() { if (typeof renderMarquee === 'function') renderMarquee(); }]);
+        listenToKey('disclaimer', [function() { if (typeof renderDisclaimer === 'function') renderDisclaimer(); }]);
+        listenToKey('games_primary', [function() { if (typeof renderLiveResults === 'function') renderLiveResults(); }]);
+        listenToKey('games_secondary', [function() { if (typeof renderLiveResults === 'function') renderLiveResults(); }]);
+        listenToKey('fullchart_headers', [function() { if (typeof renderFullChart === 'function') renderFullChart('fullchart-table', 'fullchart_headers', 'fullchart_data'); }]);
+        listenToKey('fullchart_data', [function() { if (typeof renderFullChart === 'function') renderFullChart('fullchart-table', 'fullchart_headers', 'fullchart_data'); }]);
+        listenToKey('prev_fullchart_headers', [function() { if (typeof renderFullChart === 'function') renderFullChart('prev-fullchart-table', 'prev_fullchart_headers', 'prev_fullchart_data'); }]);
+        listenToKey('prev_fullchart_data', [function() { if (typeof renderFullChart === 'function') renderFullChart('prev-fullchart-table', 'prev_fullchart_headers', 'prev_fullchart_data'); }]);
+        listenToKey('year_chart_headers', [function() { if (typeof renderYearChart === 'function') renderYearChart(); }]);
+        listenToKey('year_chart_data', [function() { if (typeof renderYearChart === 'function') renderYearChart(); }]);
+    } else if (isAdminPage) {
+        console.log('[A7 Firebase] Registering Page-Specific Realtime Listeners for ADMIN PANEL (admin.html)');
+        listenToKey('games_primary', [
+            function() { if (typeof renderAdminPrimaryTable === 'function') renderAdminPrimaryTable(); },
+            function() { if (typeof renderAdminTopGameNames === 'function') renderAdminTopGameNames(); }
+        ]);
+        listenToKey('games_secondary', [function() { if (typeof renderAdminSecondaryTable === 'function') renderAdminSecondaryTable(); }]);
+        listenToKey('featured', [function() { if (typeof renderAdminFeatured === 'function') renderAdminFeatured(); }]);
+        listenToKey('marquee', [function() { if (typeof renderAdminMarquee === 'function') renderAdminMarquee(); }]);
+        listenToKey('hindi_text', [function() { if (typeof renderAdminHindiText === 'function') renderAdminHindiText(); }]);
+        listenToKey('ad_schedule', [function() { if (typeof renderAdminAdContent === 'function') renderAdminAdContent(); }]);
+        listenToKey('ad_content', [function() { if (typeof renderAdminAdContent === 'function') renderAdminAdContent(); }]);
+        listenToKey('disclaimer', [function() { if (typeof renderAdminDisclaimer === 'function') renderAdminDisclaimer(); }]);
+        listenToKey('chart1_headers', [function() { if (typeof renderAdminChart === 'function') renderAdminChart('admin-chart1', 'chart1_headers', 'chart1_data', 0); }]);
+        listenToKey('chart1_data', [function() { if (typeof renderAdminChart === 'function') renderAdminChart('admin-chart1', 'chart1_headers', 'chart1_data', 0); }]);
+        listenToKey('chart2_headers', [function() { if (typeof renderAdminChart === 'function') renderAdminChart('admin-chart2', 'chart2_headers', 'chart2_data', 1); }]);
+        listenToKey('chart2_data', [function() { if (typeof renderAdminChart === 'function') renderAdminChart('admin-chart2', 'chart2_headers', 'chart2_data', 1); }]);
+        listenToKey('chart3_headers', [function() { if (typeof renderAdminChart === 'function') renderAdminChart('admin-chart3', 'chart3_headers', 'chart3_data', 2); }]);
+        listenToKey('chart3_data', [function() { if (typeof renderAdminChart === 'function') renderAdminChart('admin-chart3', 'chart3_headers', 'chart3_data', 2); }]);
+        listenToKey('fullchart_headers', [function() { if (typeof renderAdminChart === 'function') renderAdminChart('admin-fullchart', 'fullchart_headers', 'fullchart_data', 3); }]);
+        listenToKey('fullchart_data', [function() { if (typeof renderAdminChart === 'function') renderAdminChart('admin-fullchart', 'fullchart_headers', 'fullchart_data', 3); }]);
+        listenToKey('prev_fullchart_headers', [function() { if (typeof renderAdminChart === 'function') renderAdminChart('admin-prev-fullchart', 'prev_fullchart_headers', 'prev_fullchart_data', 4); }]);
+        listenToKey('prev_fullchart_data', [function() { if (typeof renderAdminChart === 'function') renderAdminChart('admin-prev-fullchart', 'prev_fullchart_headers', 'prev_fullchart_data', 4); }]);
+        listenToKey('year_chart_headers', [function() { if (typeof renderAdminYearChart === 'function') renderAdminYearChart(); }]);
+        listenToKey('year_chart_data', [function() { if (typeof renderAdminYearChart === 'function') renderAdminYearChart(); }]);
+    } else {
+        console.log('[A7 Firebase] Registering Page-Specific Realtime Listeners for OTHER PAGES (contact.html / login.html)');
+        listenToKey('marquee', [function() { if (typeof renderMarquee === 'function') renderMarquee(); }]);
+        listenToKey('disclaimer', [function() { if (typeof renderDisclaimer === 'function') renderDisclaimer(); }]);
+    }
 }
 
 // Initialize Firebase Sync on script load
