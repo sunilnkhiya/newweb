@@ -191,6 +191,18 @@ function listenToFirebaseUpdates() {
             }
         });
 
+        // Synchronize current monthly chart keys when absent from Firebase snapshot
+        const currentMonthlyChartKeys = ['chart1_data', 'chart2_data', 'chart3_data', 'fullchart_data'];
+        currentMonthlyChartKeys.forEach(function(key) {
+            if (!(key in val) || val[key] === undefined || val[key] === null) {
+                const emptyArrayStr = JSON.stringify([]);
+                if (localStorage.getItem('a7_' + key) !== emptyArrayStr) {
+                    localStorage.setItem('a7_' + key, emptyArrayStr);
+                    hasChanges = true;
+                }
+            }
+        });
+
         if (hasChanges) {
             if (typeof renderPrimaryTable === 'function' && document.getElementById('primary-table-body')) {
                 renderPrimaryTable();
