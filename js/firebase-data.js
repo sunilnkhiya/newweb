@@ -222,6 +222,23 @@ function listenToFirebaseUpdates() {
             if (typeof renderAdminYearChart === 'function' && document.getElementById('admin-yearchart-body')) {
                 renderAdminYearChart();
             }
+            if (typeof renderAdminChart === 'function') {
+                if (document.getElementById('admin-chart1')) {
+                    renderAdminChart('admin-chart1', 'chart1_headers', 'chart1_data', 0);
+                }
+                if (document.getElementById('admin-chart2')) {
+                    renderAdminChart('admin-chart2', 'chart2_headers', 'chart2_data', 1);
+                }
+                if (document.getElementById('admin-chart3')) {
+                    renderAdminChart('admin-chart3', 'chart3_headers', 'chart3_data', 2);
+                }
+                if (document.getElementById('admin-fullchart')) {
+                    renderAdminChart('admin-fullchart', 'fullchart_headers', 'fullchart_data', 3);
+                }
+                if (document.getElementById('admin-prev-fullchart')) {
+                    renderAdminChart('admin-prev-fullchart', 'prev_fullchart_headers', 'prev_fullchart_data', 4);
+                }
+            }
         }
     }, function(error) {
         console.error('[RESULT FETCH] Realtime subscription error:', error);
